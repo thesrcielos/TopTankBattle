@@ -1,0 +1,41 @@
+name: Deploy to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.21
+
+      - name: Build Go binary
+        run: |
+          cd cmd
+          GOOS=linux GOARCH=amd64 go build -o ../main
+
+      - name: Add Procfile
+        run: echo "web: ./main" > Procfile
+
+      - name: Zip application for Beanstalk
+        run: zip -r app.zip main Procfile
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v20
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: "mi-app-go"
+          environment_name: "mi-app-go-env"
+          region: "us-east-1"
+          version_label: ${{ github.sha }}
+          deployment_package: app.zip
