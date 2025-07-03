@@ -44,7 +44,7 @@ Este es el backend de un juego multijugador desarrollado en Go. Utiliza WebSocke
 
 ```bash
 git clone https://github.com/thesrcielos/TopTankBattle.git
-cd game-backend
+cd TopTankBattle
 ```
 
 ### Instalar dependencias
