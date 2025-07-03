@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"log"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/thesrcielos/TopTankBattle/internal/user"
@@ -84,14 +84,15 @@ func getRooms(page, pageSize int) (*[]Room, error) {
 	return &rooms, nil
 }
 
-func createPlayer(id string) (*Player, error) {
+func createPlayer(id int) (*Player, error) {
 	username, errDB := user.GetUserUsername(id)
 	if errDB != nil {
 		return nil, errDB
 	}
 
+	userId := strconv.Itoa(id)
 	player := Player{
-		ID:       id,
+		ID:       userId,
 		Username: username,
 	}
 
@@ -109,7 +110,11 @@ func addPlayer(playerRequest *PlayerRequest) (*Room, error) {
 		return nil, errors.New("Room is full")
 	}
 
-	player, errDB := createPlayer(playerRequest.Player)
+	userId, err := strconv.Atoi(playerRequest.Player)
+	if err != nil {
+		return nil, fmt.Errorf("invalid player ID: %w", err)
+	}
+	player, errDB := createPlayer(userId)
 	if errDB != nil {
 		return nil, errDB
 	}

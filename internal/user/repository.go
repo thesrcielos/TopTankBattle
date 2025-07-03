@@ -43,7 +43,7 @@ func ValidateUser(username, password string) (*User, error) {
 	return &u, nil
 }
 
-func GetUserUsername(id string) (string, error) {
+func GetUserUsername(id int) (string, error) {
 	var u User
 	result := db.DB.Where("id = ?", id).First(&u)
 	if result.Error != nil {
