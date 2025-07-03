@@ -12,7 +12,7 @@ type PlayerRequest struct {
 
 type RoomRequest struct {
 	Name     string `json:"name"`
-	Player   string `json:"player"`
+	Player   int    `json:"player"`
 	Capacity int    `json:"capacity"`
 }
 
@@ -24,7 +24,7 @@ type Room struct {
 	Team1    []Player `json:"team1"`
 	Team2    []Player `json:"team2"`
 	Host     Player   `json:"host"`
-	Status   string   `json:"state"`
+	Status   string   `json:"status"`
 }
 
 type RoomPageRequest struct {

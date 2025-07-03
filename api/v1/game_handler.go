@@ -3,9 +3,10 @@ package v1
 import (
 	"net/http"
 
-	"github.com/thesrcielos/TopTankBattle/internal/game"
+	"fmt"
 
 	"github.com/labstack/echo/v4"
+	"github.com/thesrcielos/TopTankBattle/internal/game"
 )
 
 func RegisterRoomRoutes(g *echo.Group) {
@@ -24,6 +25,7 @@ func CreateRoomHandler(c echo.Context) error {
 	room, err := game.CreateRoom(&r)
 
 	if err != nil {
+		fmt.Println("Error creating room:", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(http.StatusCreated, echo.Map{
