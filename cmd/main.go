@@ -35,9 +35,7 @@ func main() {
 	g.Use(api_middleware.SetupJWTMiddleware())
 	v1.RegisterRoomRoutes(g)
 
-	f := e.Group("/game")
-	f.Use(api_middleware.SetupJWTMiddleware())
-	f.GET("/", websocket.WebSocketHandler)
+	e.GET("/game", websocket.WebSocketHandler)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
