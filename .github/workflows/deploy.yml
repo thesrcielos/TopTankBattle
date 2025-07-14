@@ -18,7 +18,7 @@ jobs:
         with:
           go-version: '1.22'
 
-      - name: Build binary
+      - name: Build binary (linux/amd64)
         run: |
           go mod tidy
           cd cmd
@@ -35,9 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - host: ${{ secrets.EC2_HOST_1 }}
-          - host: ${{ secrets.EC2_HOST_2 }}
+        instance: [ec2-1, ec2-2]  # Nombres simbólicos
 
     steps:
       - name: Download built binary
@@ -46,19 +44,28 @@ jobs:
           name: app
           path: .
 
-      - name: Copy app to EC2 ${{ matrix.host }}
+      - name: Set EC2 host from matrix
+        id: set-host
+        run: |
+          if [ "${{ matrix.instance }}" = "ec2-1" ]; then
+            echo "host=${{ secrets.EC2_HOST_1 }}" >> $GITHUB_OUTPUT
+          else
+            echo "host=${{ secrets.EC2_HOST_2 }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Copy binary to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ matrix.host }}
+          host: ${{ steps.set-host.outputs.host }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "app"
           target: "~/app"
 
-      - name: Run app on EC2 ${{ matrix.host }}
+      - name: Run app on EC2
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ matrix.host }}
+          host: ${{ steps.set-host.outputs.host }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
