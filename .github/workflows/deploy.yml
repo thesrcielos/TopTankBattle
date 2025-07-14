@@ -72,5 +72,6 @@ jobs:
             pkill app || true
             mkdir -p ~/app
             mv ~/app/app ~/app/app_latest
+            chmod +x ~/app/app_latest 
             cd ~/app
             nohup ./app_latest > output.log 2>&1 &
