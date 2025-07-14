@@ -53,15 +53,25 @@ jobs:
             echo "host=${{ secrets.EC2_HOST_2 }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Copy binary and required files to EC2
+      - name: Verifica archivos antes del scp
+        run: ls -lh .
+
+      - name: Copy binary to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ steps.set-host.outputs.host }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: |
-            app
-            map.json
+          source: "app"
+          target: "~/app"
+
+      - name: Copy required files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.set-host.outputs.host }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "map.json"
           target: "~/app"
 
 
