@@ -2,6 +2,8 @@ package user
 
 import (
 	"errors"
+
+	"github.com/thesrcielos/TopTankBattle/internal/apperrors"
 )
 
 func Signup(user User) (string, error) {
@@ -12,7 +14,7 @@ func Signup(user User) (string, error) {
 
 	token, errJWT := GenerateJWT(u.ID)
 	if errJWT != nil {
-		return "", errJWT
+		return "", apperrors.NewAppError(500, "error creating jwt token", errJWT)
 	}
 	return token, nil
 }
@@ -24,7 +26,7 @@ func Login(user User) (string, error) {
 	}
 	token, errJWT := GenerateJWT(u.ID)
 	if errJWT != nil {
-		return "", errJWT
+		return "", apperrors.NewAppError(500, "error creating jwt token", errJWT)
 	}
 	return token, nil
 }

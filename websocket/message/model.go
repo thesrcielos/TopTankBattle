@@ -31,3 +31,18 @@ type RoomPlayerLeave struct {
 	Player string `json:"player"`
 	Room   string `json:"room"`
 }
+
+type RoomKickRequestPayload struct {
+	PlayerId string `json:"playerId"`
+	RoomId   string `json:"roomId"`
+}
+
+type GameStartPayload struct {
+	RoomId string `json:"roomId"`
+}
+
+type GameMovePayload struct {
+	X     float64 `json:"x"`
+	Y     float64 `json:"y"`
+	Angle float64 `json:"angle"`
+}

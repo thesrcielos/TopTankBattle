@@ -20,7 +20,7 @@ func SignupHandler(c echo.Context) error {
 	}
 	token, err := user.Signup(u)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return err
 	}
 	return c.JSON(http.StatusCreated, echo.Map{"token": token})
 }

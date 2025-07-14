@@ -1,56 +1,116 @@
 package state
 
 import (
+	"log"
 	"sync"
+
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-type PlayerPosition struct {
-	X float64
-	Y float64
+type Position struct {
+	X     float64 `json:"x"`
+	Y     float64 `json:"y"`
+	Angle float64 `json:"angle"`
 }
+
+type Bullet struct {
+	ID       string     `json:"id"`
+	Position Position   `json:"position"`
+	Speed    float64    `json:"speed"`
+	OwnerId  string     `json:"ownerId"`
+	BulletMu sync.Mutex `json:"-"`
+}
+
+type Fortress struct {
+	ID         string     `json:"id"`
+	Position   Position   `json:"position"`
+	Health     int        `json:"health"`
+	Team1      bool       `json:"team1"`
+	FortressMu sync.Mutex `json:"-"`
+}
+
 type PlayerState struct {
-	ID             string
-	PlayerPosition *PlayerPosition
-	Conn           *websocket.Conn
-	ConnMu         sync.Mutex
+	ID       string     `json:"id"`
+	Position Position   `json:"position"`
+	Health   int        `json:"health"`
+	Team1    bool       `json:"team1"`
+	PlayerMu sync.Mutex `json:"-"`
+}
+
+type GameState struct {
+	Timestamp  int64                   `json:"timestamp"`
+	Players    map[string]*PlayerState `json:"players"`
+	Bullets    map[string]*Bullet      `json:"bullets"`
+	Fortresses []*Fortress             `json:"fortress"`
+	RoomId     string                  `json:"-"`
+	GameMu     sync.Mutex              `json:"-"`
+}
+
+type PlayerConnection struct {
+	ID          string
+	PlayerState *PlayerState
+	GameState   *GameState
+	Connected   bool
+	Conn        *websocket.Conn
+	ConnMu      sync.Mutex
 }
 
 var (
-	players   = make(map[string]*PlayerState)
+	players   = make(map[string]*PlayerConnection)
 	playersMu sync.RWMutex
 )
 
 func RegisterPlayer(id string, conn *websocket.Conn) {
+	player := GetPlayer(id)
 	playersMu.Lock()
 	defer playersMu.Unlock()
-
-	players[id] = &PlayerState{
-		ID:   id,
-		Conn: conn,
+	if player == nil {
+		players[id] = &PlayerConnection{
+			ID:        id,
+			Connected: true,
+			Conn:      conn,
+		}
+	} else {
+		player.ConnMu.Lock()
+		player.Conn = conn
+		player.Connected = true
+		player.ConnMu.Unlock()
 	}
 }
 
-func UnregisterPlayer(id string) {
-	playersMu.Lock()
-	defer playersMu.Unlock()
+func UnregisterPlayerDelayed(id string, delay time.Duration, LeaveRoom func(string) error) {
+	go func() {
+		time.Sleep(delay)
 
-	delete(players, id)
+		playersMu.Lock()
+		player := players[id]
+		if player != nil && !player.Connected {
+			delete(players, id)
+			playersMu.Unlock()
+
+			LeaveRoom(id)
+			log.Printf("Player %s removed for %s seconds of inactivity", id, delay)
+		} else {
+			playersMu.Unlock()
+			log.Printf("Player %s Reconnected on time", id)
+		}
+	}()
 }
 
-func GetPlayer(id string) *PlayerState {
+func GetPlayer(id string) *PlayerConnection {
 	playersMu.RLock()
 	defer playersMu.RUnlock()
 
 	return players[id]
 }
 
-func GetAllPlayers() []*PlayerState {
+func GetAllPlayers() []*PlayerConnection {
 	playersMu.RLock()
 	defer playersMu.RUnlock()
 
-	all := make([]*PlayerState, 0, len(players))
+	all := make([]*PlayerConnection, 0, len(players))
 	for _, p := range players {
 		all = append(all, p)
 	}

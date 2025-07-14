@@ -1,9 +1,9 @@
 package v1
 
 import (
-	"net/http"
-
 	"fmt"
+	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/thesrcielos/TopTankBattle/internal/game"
@@ -26,7 +26,7 @@ func CreateRoomHandler(c echo.Context) error {
 
 	if err != nil {
 		fmt.Println("Error creating room:", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return err
 	}
 	return c.JSON(http.StatusCreated, echo.Map{
 		"room": room,
@@ -34,14 +34,26 @@ func CreateRoomHandler(c echo.Context) error {
 }
 
 func GetRoomsHandler(c echo.Context) error {
-	var p game.RoomPageRequest
-	if err := c.Bind(&p); err != nil {
+	page := c.QueryParam("page")
+	pageSize := c.QueryParam("size")
+	if page == "" || pageSize == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request")
 	}
 
-	rooms, err := game.GetRooms(&p)
+	pageInt, err := strconv.Atoi(page)
+	if err != nil || pageInt < 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid page number")
+	}
+	pageSizeInt, err := strconv.Atoi(pageSize)
+	if err != nil || pageSizeInt <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid page size")
+	}
+
+	rooms, err := game.GetRooms(&game.RoomPageRequest{
+		Page:     pageInt,
+		PageSize: pageInt})
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return err
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
@@ -56,7 +68,7 @@ func JoinRoomHandler(c echo.Context) error {
 	}
 	room, err := game.JoinRoom(&p)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return err
 	}
 
 	return c.JSON(http.StatusAccepted, echo.Map{
@@ -65,16 +77,16 @@ func JoinRoomHandler(c echo.Context) error {
 }
 
 func LeaveRoomHandler(c echo.Context) error {
-	var p game.PlayerRequest
-	if err := c.Bind(&p); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid request")
+	playerId := c.QueryParam("playerId")
+	if playerId == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "playerId is required")
 	}
-	room, err := game.LeaveRoom(&p)
+	err := game.LeaveRoom(playerId)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return err
 	}
 
 	return c.JSON(http.StatusAccepted, echo.Map{
-		"room": room,
+		"room": true,
 	})
 }

@@ -12,6 +12,8 @@ var handlers = map[string]func(playerId string, payload message.Message){
 	"ROOM_LEAVE":    actions.HandleRoomLeave,
 	"MOVE":          actions.HandleMove,
 	"SHOOT":         actions.HandleShoot,
+	"ROOM_KICK":     actions.HandleRoomKick,
+	"GAME_START":    actions.HandleGameStart,
 }
 
 func RouteMessage(playerId string, msg message.Message) {

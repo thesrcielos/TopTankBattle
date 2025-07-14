@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/thesrcielos/TopTankBattle/internal/game"
 	"github.com/thesrcielos/TopTankBattle/websocket/message"
-	"github.com/thesrcielos/TopTankBattle/websocket/transport"
 )
 
 func HandleRoomLeave(playerId string, msg message.Message) {
@@ -15,10 +13,7 @@ func HandleRoomLeave(playerId string, msg message.Message) {
 		log.Println("Error decoding: ", err)
 		return
 	}
-	room, err := game.LeaveRoom(&game.PlayerRequest{
-		Player: roomLeave.Player,
-		Room:   roomLeave.Room,
-	})
+	/*room, err := game.LeaveRoom(playerId)
 	if err != nil {
 		log.Println(err)
 		return
@@ -38,5 +33,5 @@ func HandleRoomLeave(playerId string, msg message.Message) {
 
 	for _, p := range room.Team2 {
 		transport.SendToPlayer(p.ID, response)
-	}
+	}*/
 }
