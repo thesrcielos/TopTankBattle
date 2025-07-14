@@ -89,5 +89,6 @@ jobs:
             mv ~/app/app ~/app/app_latest
             chmod +x ~/app/app_latest 
             source ~/.bashrc       
+            echo $REDIS_ADDR
             cd ~/app
             nohup ./app_latest > output.log 2>&1 &
