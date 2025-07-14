@@ -88,7 +88,16 @@ jobs:
             mkdir -p ~/app
             mv ~/app/app ~/app/app_latest
             chmod +x ~/app/app_latest 
-            source ~/.bashrc       
-            echo $REDIS_ADDR
+            export DB_HOST="${{ secrets.DB_HOST }}"
+            export DB_PORT="${{ secrets.DB_PORT }}"
+            export DB_USER="${{ secrets.DB_USER }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export DB_NAME="${{ secrets.DB_NAME }}"
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export REDIS_ADDR="${{ secrets.REDIS_ADDR }}"
+            export REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}"
+            export REDIS_USERNAME="${{ secrets.REDIS_USERNAME }}"
+            export REDIS_DB="${{ secrets.REDIS_DB }}"
+
             cd ~/app
             nohup ./app_latest > output.log 2>&1 &
