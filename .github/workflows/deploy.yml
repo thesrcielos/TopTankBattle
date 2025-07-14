@@ -57,7 +57,7 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ steps.set-host.outputs.host }}
-          username: ec2-user
+          username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           source: |
             app
