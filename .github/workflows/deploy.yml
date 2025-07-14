@@ -1,41 +1,69 @@
-name: Deploy to AWS Elastic Beanstalk
+name: Deploy to Multiple EC2 Instances
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-
+    outputs:
+      artifact-name: app
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: '1.22'
 
-      - name: Build Go binary
+      - name: Build binary
         run: |
+          go mod tidy
           cd cmd
-          GOOS=linux GOARCH=amd64 go build -o ../main
+          GOOS=linux GOARCH=amd64 go build -o ../app
 
-      - name: Add Procfile
-        run: echo "web: ./main" > Procfile
-
-      - name: Zip application for Beanstalk
-        run: zip -r app.zip main Procfile
-
-      - name: Deploy to Elastic Beanstalk
-        uses: einaregilsson/beanstalk-deploy@v20
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v4
         with:
-          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application_name: "mi-app-go"
-          environment_name: "mi-app-go-env"
-          region: "us-east-1"
-          version_label: ${{ github.sha }}
-          deployment_package: app.zip
+          name: app
+          path: ./app
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - host: ${{ secrets.EC2_HOST_1 }}
+          - host: ${{ secrets.EC2_HOST_2 }}
+
+    steps:
+      - name: Download built binary
+        uses: actions/download-artifact@v4
+        with:
+          name: app
+          path: .
+
+      - name: Copy app to EC2 ${{ matrix.host }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ matrix.host }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "app"
+          target: "~/app"
+
+      - name: Run app on EC2 ${{ matrix.host }}
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ matrix.host }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            pkill app || true
+            mkdir -p ~/app
+            mv ~/app/app ~/app/app_latest
+            cd ~/app
+            nohup ./app_latest > output.log 2>&1 &

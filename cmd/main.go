@@ -67,5 +67,8 @@ func main() {
 		}
 		return c.JSON(http.StatusOK, echo.Map{"message": "All data deleted successfully"})
 	})
+	e.GET("/health", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, echo.Map{"ok": true})
+	})
 	e.Logger.Fatal(e.Start(":8080"))
 }
