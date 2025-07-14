@@ -31,3 +31,30 @@ type RoomPageRequest struct {
 	Page     int `json:"page"`
 	PageSize int `json:"pageSize"`
 }
+
+type JoinRoomMessage struct {
+	Player Player `json:"player"`
+	Team   int    `json:"team"`
+}
+
+type LeaveRoomMessage struct {
+	Player string `json:"player"`
+	Host   Player `json:"host"`
+}
+
+type KickPlayerMessage struct {
+	Room   string `json:"roomId"`
+	Kicked string `json:"kicked"`
+}
+
+type MoveMessage struct {
+	PlayerId string      `json:"playerId"`
+	Position interface{} `json:"position"`
+}
+
+type ShootMessage struct {
+	ID       string      `json:"id"`
+	Position interface{} `json:"position"`
+	Team1    bool        `json:"team1"`
+	OwnerId  string      `json:"ownerId"`
+}

@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	api_middleware "github.com/thesrcielos/TopTankBattle/api/middleware"
 	v1 "github.com/thesrcielos/TopTankBattle/api/v1"
+	"github.com/thesrcielos/TopTankBattle/internal/apperrors"
+	"github.com/thesrcielos/TopTankBattle/internal/game/maps"
 	"github.com/thesrcielos/TopTankBattle/internal/user"
 	"github.com/thesrcielos/TopTankBattle/pkg/db"
 	"github.com/thesrcielos/TopTankBattle/websocket"
@@ -22,7 +28,26 @@ func main() {
 	db.Init()
 	db.DB.AutoMigrate(&user.User{})
 
+	maps.GenerateCollisionMatrix("map.json")
 	e := echo.New()
+
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		var appErr *apperrors.AppError
+
+		if errors.As(err, &appErr) {
+			_ = c.JSON(appErr.Code, map[string]string{
+				"error": appErr.Message,
+			})
+		} else if he, ok := err.(*echo.HTTPError); ok {
+			_ = c.JSON(he.Code, map[string]string{
+				"error": fmt.Sprintf("%v", he.Message),
+			})
+		} else {
+			_ = c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Internal Server Error",
+			})
+		}
+	}
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
@@ -35,9 +60,12 @@ func main() {
 	g.Use(api_middleware.SetupJWTMiddleware())
 	v1.RegisterRoomRoutes(g)
 
-	f := e.Group("/game")
-	f.Use(api_middleware.SetupJWTMiddleware())
-	f.GET("/", websocket.WebSocketHandler)
-
+	e.GET("/game", websocket.WebSocketHandler)
+	e.GET("/deleteAll", func(c echo.Context) error {
+		if err := db.Rdb.FlushAll(context.Background()).Err(); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete all data")
+		}
+		return c.JSON(http.StatusOK, echo.Map{"message": "All data deleted successfully"})
+	})
 	e.Logger.Fatal(e.Start(":8080"))
 }

@@ -3,8 +3,10 @@ package websocket
 import (
 	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/thesrcielos/TopTankBattle/internal/game"
 	"github.com/thesrcielos/TopTankBattle/internal/game/state"
 	"github.com/thesrcielos/TopTankBattle/websocket/message"
 	"github.com/thesrcielos/TopTankBattle/websocket/router"
@@ -12,8 +14,7 @@ import (
 
 func listenPlayerMessages(playerId string, conn *websocket.Conn) {
 	defer func() {
-		log.Printf("Player Disconnected: %s", playerId)
-		state.UnregisterPlayer(playerId)
+		state.UnregisterPlayerDelayed(playerId, 40*time.Second, game.LeaveRoom)
 		conn.Close()
 	}()
 
