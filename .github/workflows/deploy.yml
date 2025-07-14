@@ -88,5 +88,6 @@ jobs:
             mkdir -p ~/app
             mv ~/app/app ~/app/app_latest
             chmod +x ~/app/app_latest 
+            source ~/.bashrc       
             cd ~/app
             nohup ./app_latest > output.log 2>&1 &
