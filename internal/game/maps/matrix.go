@@ -4,13 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 var Tmap Map
 var Matrix [][]bool
 
+func getAppDir() string {
+	exe, _ := os.Executable()
+	return filepath.Dir(exe)
+}
+
 func ReadMap(path string) (Map, error) {
-	file, errd := os.Open(path)
+	pathDef := filepath.Join(getAppDir(), "map.json")
+	file, errd := os.Open(pathDef)
 	if errd != nil {
 		panic(errd)
 	}
