@@ -1,10 +1,11 @@
 package game
 
 import (
+	"encoding/json"
+	"log"
 	"strconv"
 
 	"github.com/thesrcielos/TopTankBattle/internal/apperrors"
-	"github.com/thesrcielos/TopTankBattle/websocket/transport"
 )
 
 func CreateRoom(request *RoomRequest) (*Room, error) {
@@ -29,6 +30,7 @@ func CreateRoom(request *RoomRequest) (*Room, error) {
 		return nil, err
 	}
 
+	SubscribeToRoom(room.ID)
 	return room, nil
 }
 
@@ -145,7 +147,7 @@ func KickPlayerFromRoom(playerId string, roomId string, playerToKick string) (*R
 }
 
 func notifyPlayerKick(room *Room, kickedPlayerId string) error {
-	message := transport.OutgoingMessage{
+	message := GameMessage{
 		Type: "ROOM_KICK",
 		Payload: KickPlayerMessage{
 			Room:   room.ID,
@@ -153,7 +155,7 @@ func notifyPlayerKick(room *Room, kickedPlayerId string) error {
 		},
 	}
 	room.Team1 = append(room.Team1, Player{ID: kickedPlayerId})
-	go sendRoomChangeMessage(room, "", message)
+	go sendRoomChangeMessage(room, message)
 	return nil
 }
 
@@ -163,7 +165,7 @@ func notifyPlayerJoin(room *Room, playerId string) error {
 		return err
 	}
 
-	message := transport.OutgoingMessage{
+	message := GameMessage{
 		Type: "ROOM_JOIN",
 		Payload: JoinRoomMessage{
 			Player: player["player"].(Player),
@@ -171,11 +173,11 @@ func notifyPlayerJoin(room *Room, playerId string) error {
 		},
 	}
 
-	go sendRoomChangeMessage(room, playerId, message)
+	go sendRoomChangeMessage(room, message)
 	return nil
 }
 
-func sendRoomChangeMessage(room *Room, playerId string, message transport.OutgoingMessage) {
+func sendRoomChangeMessage(room *Room, message GameMessage) {
 	players := make([]string, 0, len(room.Team1)+len(room.Team2))
 	for _, player := range room.Team1 {
 		players = append(players, player.ID)
@@ -183,7 +185,13 @@ func sendRoomChangeMessage(room *Room, playerId string, message transport.Outgoi
 	for _, player := range room.Team2 {
 		players = append(players, player.ID)
 	}
-	transport.BroadcastExcept(playerId, &players, message)
+	message.Users = players
+	msg, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error encoding message:", err)
+		return
+	}
+	PublishToRoom(room.ID, string(msg))
 }
 
 func getPlayerFromRoom(playerId string, room *Room) (map[string]interface{}, error) {
@@ -208,10 +216,13 @@ func getPlayerFromRoom(playerId string, room *Room) (map[string]interface{}, err
 
 func notifyOrDeleteRoom(room *Room, playerId string) error {
 	if room.Players == 0 {
+		if err := UnsubscribeFromRoom(room.ID); err != nil {
+			return err
+		}
 		return deleteRoom(room.ID)
 	}
 
-	message := transport.OutgoingMessage{
+	message := GameMessage{
 		Type: "ROOM_LEAVE",
 		Payload: LeaveRoomMessage{
 			Player: playerId,
@@ -219,7 +230,7 @@ func notifyOrDeleteRoom(room *Room, playerId string) error {
 		},
 	}
 
-	go sendRoomChangeMessage(room, playerId, message)
+	go sendRoomChangeMessage(room, message)
 	return nil
 }
 

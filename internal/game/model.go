@@ -58,3 +58,9 @@ type ShootMessage struct {
 	Team1    bool        `json:"team1"`
 	OwnerId  string      `json:"ownerId"`
 }
+
+type GameMessage struct {
+	Type    string      `json:"type"`
+	Payload interface{} `json:"payload"`
+	Users   []string    `json:"users"`
+}

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -105,14 +106,17 @@ func StartGame(playerId string, roomId string) error {
 }
 
 func notifyGameStart(game *state.GameState) {
-	message := transport.OutgoingMessage{
+	message := GameMessage{
 		Type:    "GAME_START",
 		Payload: game,
+		Users:   []string{},
 	}
-
-	for playerId, _ := range game.Players {
-		transport.SendToPlayer(playerId, message)
+	msg, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error encoding message:", err)
+		return
 	}
+	PublishToRoom(game.RoomId, string(msg))
 }
 
 func setPlayersGameState(gameState *state.GameState) error {
@@ -187,23 +191,36 @@ func MovePlayer(playerId string, newPosition state.Position) {
 	player.PlayerState.Position = newPosition
 	player.PlayerState.PlayerMu.Unlock()
 
-	message := transport.OutgoingMessage{
+	message := GameMessage{
 		Type: "MOVE",
 		Payload: MoveMessage{
 			PlayerId: playerId,
 			Position: newPosition,
 		},
+		Users: getGamePlayerIds(player.GameState),
 	}
-	sendGameChangeMessage(playerId, player.GameState, message)
+	msg, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Error encoding message:", err)
+		return
+	}
+
+	PublishToRoom(player.GameState.RoomId, string(msg))
 }
 
-func sendGameChangeMessage(PlayerId string, game *state.GameState, msg transport.OutgoingMessage) {
-	for playerId, _ := range game.Players {
-		if playerId == PlayerId {
-			continue
-		}
-		transport.SendToPlayer(playerId, msg)
+func sendGameChangeMessage(game *state.GameState, msg GameMessage) {
+	if game == nil {
+		log.Println("Game state is nil")
+		return
 	}
+
+	message, err := json.Marshal(msg)
+	if err != nil {
+		log.Println("Error encoding message:", err)
+		return
+	}
+
+	PublishToRoom(game.RoomId, string(message))
 }
 
 func ShootBullet(bullet *state.Bullet) {
@@ -244,6 +261,7 @@ func ShootBullet(bullet *state.Bullet) {
 }
 
 func RunGameLoop(state *state.GameState) {
+	users := getGamePlayerIds(state)
 	ticker := time.NewTicker(25 * time.Millisecond) // ~40 FPS
 	defer ticker.Stop()
 	gameOver := false
@@ -272,19 +290,21 @@ func RunGameLoop(state *state.GameState) {
 				hitPlayer.Health -= bulletDamage
 				delete(state.Bullets, id)
 				if hitPlayer.Health > 0 {
-					sendGameChangeMessage("", state, transport.OutgoingMessage{
+					sendGameChangeMessage(state, GameMessage{
 						Type: "PLAYER_HIT",
 						Payload: map[string]interface{}{
 							"playerId": hitPlayer.ID,
 							"health":   hitPlayer.Health,
 						},
+						Users: users,
 					})
 				} else {
-					sendGameChangeMessage("", state, transport.OutgoingMessage{
+					sendGameChangeMessage(state, GameMessage{
 						Type: "PLAYER_KILLED",
 						Payload: map[string]interface{}{
 							"playerId": hitPlayer.ID,
 						},
+						Users: users,
 					})
 					go RevivePlayer(hitPlayer.ID, state)
 				}
@@ -294,22 +314,24 @@ func RunGameLoop(state *state.GameState) {
 			if hitFortress != nil {
 				hitFortress.Health -= bulletDamage
 				if hitFortress.Health <= 0 {
-					sendGameChangeMessage("", state, transport.OutgoingMessage{
+					sendGameChangeMessage(state, GameMessage{
 						Type: "GAME_OVER",
 						Payload: map[string]interface{}{
 							"team1": !hitFortress.Team1,
 						},
+						Users: users,
 					})
 					gameOver = true
 					FinishGame(state)
 					break
 				} else {
-					sendGameChangeMessage("", state, transport.OutgoingMessage{
+					sendGameChangeMessage(state, GameMessage{
 						Type: "FORTRESS_HIT",
 						Payload: map[string]interface{}{
 							"team1":  hitFortress.Team1,
 							"health": hitFortress.Health,
 						},
+						Users: users,
 					})
 				}
 				delete(state.Bullets, id)
@@ -402,7 +424,7 @@ func RevivePlayer(playerId string, gameState *state.GameState) {
 		x = 1834
 		angle = math.Pi
 	}
-	sendGameChangeMessage("", gameState, transport.OutgoingMessage{
+	sendGameChangeMessage(gameState, GameMessage{
 		Type: "PLAYER_REVIVED",
 		Payload: map[string]interface{}{
 			"playerId": playerId,
@@ -412,6 +434,7 @@ func RevivePlayer(playerId string, gameState *state.GameState) {
 				Angle: angle,
 			},
 		},
+		Users: getGamePlayerIds(gameState),
 	})
 }
 
@@ -438,10 +461,18 @@ func FinishGame(game *state.GameState) {
 		return
 	}
 
-	msg := transport.OutgoingMessage{
+	msg := GameMessage{
 		Type:    "ROOM_INFO",
 		Payload: room,
 	}
 
-	sendRoomChangeMessage(room, "", msg)
+	sendRoomChangeMessage(room, msg)
+}
+
+func getGamePlayerIds(game *state.GameState) []string {
+	playerIds := make([]string, 0, len(game.Players))
+	for id := range game.Players {
+		playerIds = append(playerIds, id)
+	}
+	return playerIds
 }
