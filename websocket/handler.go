@@ -56,7 +56,9 @@ func WebSocketHandler(c echo.Context) error {
 		for {
 			err := ws.WriteMessage(websocket.PingMessage, nil)
 			conn.Close()
-			
+			if err != nil{
+				log.Printf("Error sending ping %s", err)
+			}
 		}
 		time.Sleep(30 * time.Second)
 	}()
