@@ -36,6 +36,7 @@ func SubscribeToRoom(roomID string) error {
 	ch := sub.Channel()
 	subs[roomID] = sub
 
+	log.Printf("Subscribed to room %s", roomID)
 	go func() {
 		for msg := range ch {
 			SendReceivedMessage(msg.Payload)
@@ -56,12 +57,13 @@ func UnsubscribeFromRoom(roomID string) error {
 }
 
 func SendReceivedMessage(messageEncoded string) {
+
 	var message GameMessage
 	if err := json.Unmarshal([]byte(messageEncoded), &message); err != nil {
 		log.Println("Error decoding message:", err)
 		return
 	}
-
+	fmt.Println("Received message:", message)
 	if message.Type == "GAME_MOVE" {
 		updateGamePlayerState(message.Payload.(MovePlayerMessage).PlayerId, message.Payload.(MovePlayerMessage).Position)
 		return
