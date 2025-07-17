@@ -156,7 +156,7 @@ func notifyPlayerKick(room *Room, kickedPlayerId string) error {
 		},
 	}
 	room.Team1 = append(room.Team1, Player{ID: kickedPlayerId})
-	go sendRoomChangeMessage(room, message)
+	sendRoomChangeMessage(room, message)
 	return nil
 }
 
@@ -174,7 +174,7 @@ func notifyPlayerJoin(room *Room, playerId string) error {
 		},
 	}
 
-	go sendRoomChangeMessage(room, message)
+	sendRoomChangeMessage(room, message)
 	return nil
 }
 
@@ -231,7 +231,7 @@ func notifyOrDeleteRoom(room *Room, playerId string) error {
 		},
 	}
 
-	go sendRoomChangeMessage(room, message)
+	sendRoomChangeMessage(room, message)
 	return nil
 }
 
