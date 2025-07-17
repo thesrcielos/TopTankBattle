@@ -122,13 +122,6 @@ func setPlayersGameState(gameState *state.GameState) error {
 		return apperrors.NewAppError(400, "Cannot start game: game state is nil", nil)
 	}
 
-	for playerId, _ := range gameState.Players {
-		player := state.GetPlayer(playerId)
-		if player == nil {
-			return apperrors.NewAppError(400, "Cannot start game: player does not exist", nil)
-		}
-	}
-
 	for playerId := range gameState.Players {
 		player := state.GetPlayer(playerId)
 		if player == nil {
