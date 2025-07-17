@@ -65,11 +65,17 @@ func SendReceivedMessage(messageEncoded string) {
 	}
 	fmt.Println("Received message:", message)
 	if message.Type == "GAME_MOVE" {
-		updateGamePlayerState(message.Payload.(MovePlayerMessage).PlayerId, message.Payload.(MovePlayerMessage).Position)
+		payloadBytes, _ := json.Marshal(message.Payload)
+		var move MovePlayerMessage
+		json.Unmarshal(payloadBytes, &move)
+
+		updateGamePlayerState(move.PlayerId, move.Position)
 		return
 	}
 	if message.Type == "GAME_SHOOT" {
-		bullet := message.Payload.(state.Bullet)
+		payloadBytes, _ := json.Marshal(message.Payload)
+		var bullet state.Bullet
+		json.Unmarshal(payloadBytes, &bullet)
 		updateGameBullets(bullet)
 		return
 	}
