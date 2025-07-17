@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"os"
 
+	"context"
 	"strconv"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
+	"github.com/redis/go-redis/v9"
 	"github.com/thesrcielos/TopTankBattle/internal/game/state"
+	"github.com/thesrcielos/TopTankBattle/pkg/db"
 )
 
 var (
@@ -37,9 +40,15 @@ func WebSocketHandler(c echo.Context) error {
 		return err
 	}
 
+	ctx := context.Background()
+	val, err := db.Rdb.Get(ctx, userID).Result()
+	if err == redis.Nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "User room not found")
+	} else if err != nil {
+		return errors.New("Error retrieving user data from Redis")
+	}
 	log.Printf("Player connected: %s", userID)
-
-	state.RegisterPlayer(userID, ws)
+	state.RegisterPlayer(userID, val, ws)
 	go listenPlayerMessages(userID, ws)
 
 	return nil
