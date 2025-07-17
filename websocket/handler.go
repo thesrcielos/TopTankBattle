@@ -49,6 +49,16 @@ func WebSocketHandler(c echo.Context) error {
 	}
 	log.Printf("Player connected: %s", userID)
 	state.RegisterPlayer(userID, val, ws)
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			err := ws.WriteMessage(websocket.PingMessage, nil)
+			conn.Close()
+			
+		}
+		time.Sleep(30 * time.Second)
+	}()
 	go listenPlayerMessages(userID, ws)
 
 	return nil
