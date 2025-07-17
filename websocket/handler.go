@@ -55,7 +55,7 @@ func WebSocketHandler(c echo.Context) error {
 		defer ticker.Stop()
 		for {
 			err := ws.WriteMessage(websocket.PingMessage, nil)
-			conn.Close()
+			ws.Close()
 			if err != nil{
 				log.Printf("Error sending ping %s", err)
 			}
