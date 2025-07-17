@@ -16,11 +16,10 @@ type Position struct {
 }
 
 type Bullet struct {
-	ID       string     `json:"id"`
-	Position Position   `json:"position"`
-	Speed    float64    `json:"speed"`
-	OwnerId  string     `json:"ownerId"`
-	BulletMu sync.Mutex `json:"-"`
+	ID       string   `json:"id"`
+	Position Position `json:"position"`
+	Speed    float64  `json:"speed"`
+	OwnerId  string   `json:"ownerId"`
 }
 
 type Fortress struct {
@@ -49,12 +48,12 @@ type GameState struct {
 }
 
 type PlayerConnection struct {
-	ID          string
-	PlayerState *PlayerState
-	GameState   *GameState
-	Connected   bool
-	Conn        *websocket.Conn
-	ConnMu      sync.Mutex
+	ID        string
+	RoomId    string
+	GameState *GameState
+	Connected bool
+	Conn      *websocket.Conn
+	ConnMu    sync.Mutex
 }
 
 var (
@@ -62,7 +61,7 @@ var (
 	playersMu sync.RWMutex
 )
 
-func RegisterPlayer(id string, conn *websocket.Conn) {
+func RegisterPlayer(id string, roomId string, conn *websocket.Conn) {
 	player := GetPlayer(id)
 	playersMu.Lock()
 	defer playersMu.Unlock()
@@ -71,6 +70,8 @@ func RegisterPlayer(id string, conn *websocket.Conn) {
 			ID:        id,
 			Connected: true,
 			Conn:      conn,
+			GameState: nil,
+			RoomId:    roomId,
 		}
 	} else {
 		player.ConnMu.Lock()

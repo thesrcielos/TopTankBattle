@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/thesrcielos/TopTankBattle/internal/game/state"
 	"github.com/thesrcielos/TopTankBattle/pkg/db"
 	"github.com/thesrcielos/TopTankBattle/websocket/transport"
 )
@@ -60,6 +61,16 @@ func SendReceivedMessage(messageEncoded string) {
 		return
 	}
 
+	if message.Type == "GAME_MOVE" {
+		updateGamePlayerState(message.Payload.(MovePlayerMessage).PlayerId, message.Payload.(MovePlayerMessage).Position)
+		return
+	}
+	if message.Type == "GAME_SHOOT" {
+		bullet := message.Payload.(state.Bullet)
+		updateGameBullets(bullet)
+		return
+	}
+
 	msg := transport.OutgoingMessage{
 		Type:    message.Type,
 		Payload: message.Payload,
@@ -68,4 +79,31 @@ func SendReceivedMessage(messageEncoded string) {
 	for _, playerId := range message.Users {
 		transport.SendToPlayer(playerId, msg)
 	}
+}
+
+func updateGamePlayerState(playerId string, position state.Position) {
+	player := state.GetPlayer(playerId)
+	if player == nil || player.GameState == nil {
+		return
+	}
+	game := player.GameState
+	game.GameMu.Lock()
+	game.Players[playerId].Position = position
+	game.GameMu.Unlock()
+}
+
+func updateGameBullets(bullet state.Bullet) {
+	player := state.GetPlayer(bullet.OwnerId)
+	if player == nil || player.GameState == nil {
+		return
+	}
+	game := player.GameState
+	game.GameMu.Lock()
+	game.Bullets[bullet.ID] = &bullet
+	game.GameMu.Unlock()
+}
+
+type MovePlayerMessage struct {
+	PlayerId string         `json:"playerId"`
+	Position state.Position `json:"position"`
 }

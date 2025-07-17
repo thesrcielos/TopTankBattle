@@ -64,3 +64,8 @@ type GameMessage struct {
 	Payload interface{} `json:"payload"`
 	Users   []string    `json:"users"`
 }
+
+type GameStateMessage struct {
+	Type    string      `json:"type"`
+	Payload interface{} `json:"payload"`
+}
