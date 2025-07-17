@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"os"
@@ -35,16 +36,23 @@ func Init() {
 
 func redisDBConnection() {
 	ctx := context.Background()
+	useTLS := os.Getenv("REDIS_TLS") == "true"
+
+	var tlsConfig *tls.Config
+	if useTLS {
+		tlsConfig = &tls.Config{}
+	}
 	dbNum, err := strconv.Atoi(os.Getenv("REDIS_DB"))
 	if err != nil {
 		log.Fatalf("error converting REDIS_DB to int: %v", err)
-		dbNum = 0 // default to 0 if conversion fails
+		dbNum = 0
 	}
 	Rdb = redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_ADDR"),
-		Username: os.Getenv("REDIS_USERNAME"),
-		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       dbNum,
+		Addr:      os.Getenv("REDIS_ADDR"),
+		Username:  os.Getenv("REDIS_USERNAME"),
+		Password:  os.Getenv("REDIS_PASSWORD"),
+		DB:        dbNum,
+		TLSConfig: tlsConfig,
 	})
 
 	pong, err := Rdb.Ping(ctx).Result()

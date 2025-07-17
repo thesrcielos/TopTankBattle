@@ -98,6 +98,7 @@ jobs:
             export REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}"
             export REDIS_USERNAME="${{ secrets.REDIS_USERNAME }}"
             export REDIS_DB="${{ secrets.REDIS_DB }}"
+            export REDIS_TLS="${{ secrets.REDIS_TLS }}"
 
             cd ~/app
             nohup ./app_latest > output.log 2>&1 &
