@@ -29,6 +29,7 @@ func SubscribeToRoom(roomID string) error {
 
 	_, err := sub.Receive(ctx)
 	if err != nil {
+		log.Println("error subscribing to room %s: %w", roomID, err)
 		return fmt.Errorf("error subscribing to room %s: %w", roomID, err)
 	}
 
