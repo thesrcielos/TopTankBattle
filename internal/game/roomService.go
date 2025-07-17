@@ -60,6 +60,7 @@ func JoinRoom(playerRequest *PlayerRequest) (*Room, error) {
 		return nil, err
 	}
 
+	SubscribeToRoom(room.ID)
 	if err := notifyPlayerJoin(room, playerRequest.Player); err != nil {
 		return nil, err
 	}
