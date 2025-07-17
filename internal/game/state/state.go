@@ -100,6 +100,15 @@ func UnregisterPlayerDelayed(id string, delay time.Duration, LeaveRoom func(stri
 	}()
 }
 
+func UnregisterPlayer(id string) {
+	player := GetPlayer(id)
+	if player == nil {
+		return
+	}
+	player.Conn.Close()
+
+	delete(players, id)
+}
 func GetPlayer(id string) *PlayerConnection {
 	playersMu.RLock()
 	defer playersMu.RUnlock()

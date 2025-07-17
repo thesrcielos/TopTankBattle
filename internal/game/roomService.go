@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/thesrcielos/TopTankBattle/internal/apperrors"
+	"github.com/thesrcielos/TopTankBattle/internal/game/state"
 )
 
 func CreateRoom(request *RoomRequest) (*Room, error) {
@@ -98,7 +99,7 @@ func LeaveRoom(playerId string) error {
 	if err := notifyOrDeleteRoom(room, playerId); err != nil {
 		return err
 	}
-
+	state.UnregisterPlayer(playerId)
 	return nil
 }
 
