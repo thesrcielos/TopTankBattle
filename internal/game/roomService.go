@@ -145,6 +145,8 @@ func KickPlayerFromRoom(playerId string, roomId string, playerToKick string) (*R
 		return nil, err
 	}
 
+	state.UnregisterPlayer(playerToKick)
+
 	return room, nil
 }
 
