@@ -1,14 +1,12 @@
 package websocket
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"time"
-
-	"context"
 	"strconv"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -50,18 +48,6 @@ func WebSocketHandler(c echo.Context) error {
 	}
 	log.Printf("Player connected: %s", userID)
 	state.RegisterPlayer(userID, val, ws)
-	go func() {
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-		for {
-			err := ws.WriteMessage(websocket.PingMessage, nil)
-			ws.Close()
-			if err != nil{
-				log.Printf("Error sending ping %s", err)
-			}
-		}
-		time.Sleep(30 * time.Second)
-	}()
 	go listenPlayerMessages(userID, ws)
 
 	return nil
