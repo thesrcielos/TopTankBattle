@@ -97,10 +97,9 @@ func StartGame(playerId string, roomId string) error {
 		return err
 	}
 
-	room.Status = "PLAYING"
-	go saveRoom(*room)
-
 	notifyGameStart(gameState)
+	room.Status = "PLAYING"
+	saveRoom(*room)
 	go RunGameLoop(gameState)
 	return nil
 }
@@ -109,7 +108,7 @@ func notifyGameStart(game *state.GameState) {
 	message := GameMessage{
 		Type:    "GAME_START",
 		Payload: game,
-		Users:   []string{},
+		Users:   getGamePlayerIds(game),
 	}
 	msg, err := json.Marshal(message)
 	if err != nil {
