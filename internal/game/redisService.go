@@ -68,7 +68,7 @@ func SendReceivedMessage(messageEncoded string) {
 		payloadBytes, _ := json.Marshal(message.Payload)
 		var move MovePlayerMessage
 		json.Unmarshal(payloadBytes, &move)
-
+		fmt.Println("MovePlayerMessage:", move)
 		updateGamePlayerState(move.PlayerId, move.Position)
 		return
 	}
@@ -76,6 +76,7 @@ func SendReceivedMessage(messageEncoded string) {
 		payloadBytes, _ := json.Marshal(message.Payload)
 		var bullet state.Bullet
 		json.Unmarshal(payloadBytes, &bullet)
+		fmt.Println("Bullet:", bullet)
 		updateGameBullets(bullet)
 		return
 	}
