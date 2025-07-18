@@ -294,7 +294,6 @@ func getPlayerIdsFromRoomAndTeam(roomId string, playerId string) ([]string, bool
 	}
 	for _, player := range room.Team2 {
 		if player.ID == playerId {
-			team1 = true
 			continue
 		}
 		playerIds = append(playerIds, player.ID)
