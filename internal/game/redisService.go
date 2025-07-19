@@ -77,6 +77,7 @@ func SendReceivedMessage(messageEncoded string) {
 		log.Println("Error decoding message:", err)
 		return
 	}
+	fmt.Println("Received message:", message.Type, "for players:", message.Users)
 	if message.Type == "GAME_MOVE" {
 		payloadBytes, _ := json.Marshal(message.Payload)
 		var move MovePlayerMessage
