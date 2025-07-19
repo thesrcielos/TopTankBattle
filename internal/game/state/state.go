@@ -85,7 +85,13 @@ func UnregisterPlayerDelayed(id string, delay time.Duration, LeaveRoom func(stri
 	go func() {
 		playersMu.Lock()
 		player := players[id]
+		if player == nil {
+			playersMu.Unlock()
+			return
+		}
+		player.ConnMu.Lock()
 		player.Connected = false
+		player.ConnMu.Unlock()
 		playersMu.Unlock()
 
 		time.Sleep(delay)
