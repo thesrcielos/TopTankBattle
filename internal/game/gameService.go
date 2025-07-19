@@ -430,7 +430,7 @@ func RunGameLoop(state *state.GameState) {
 		saveGameStateToRedis(state)
 		state.GameMu.Unlock()
 
-		renew, err := RenewLeadership(state.RoomId, 1000*time.Millisecond)
+		renew, err := RenewLeadership(state.RoomId, 5000*time.Millisecond)
 		if err != nil {
 			continue
 		}

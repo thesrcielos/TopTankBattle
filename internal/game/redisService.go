@@ -174,10 +174,25 @@ func saveGameStateToRedis(gameState *state.GameState) {
 			"angle": p.Position.Angle,
 		})
 	}
+
+	for _, f := range gameState.Fortresses {
+		key := fmt.Sprintf("room:%s:fortress:%s", roomID, f.ID)
+		db.Rdb.HSet(ctx, key, map[string]interface{}{
+			"x":      f.Position.X,
+			"y":      f.Position.Y,
+			"health": f.Health,
+			"team1":  f.Team1,
+		})
+	}
 }
 
 func restoreGameStateFromRedis(roomID string) *state.GameState {
-	gameState := state.GameState{}
+	gameState := state.GameState{
+		RoomId:     roomID,
+		Bullets:    make(map[string]*state.Bullet),
+		Players:    make(map[string]*state.PlayerState),
+		Fortresses: make([]*state.Fortress, 0),
+	}
 
 	keys, _ := db.Rdb.Keys(ctx, fmt.Sprintf("room:%s:bullet:*", roomID)).Result()
 	for _, key := range keys {
@@ -209,9 +224,28 @@ func restoreGameStateFromRedis(roomID string) *state.GameState {
 		gameState.Players[p.ID] = &p
 	}
 
+	keys, _ = db.Rdb.Keys(ctx, fmt.Sprintf("room:%s:fortress:*", roomID)).Result()
+	for _, key := range keys {
+		vals, _ := db.Rdb.HGetAll(ctx, key).Result()
+		f := state.Fortress{
+			ID: key[len(fmt.Sprintf("room:%s:fortress:", roomID)):],
+			Position: state.Position{
+				X:     parseFloat(vals["x"]),
+				Y:     parseFloat(vals["y"]),
+				Angle: 0, // Fortress does not have an angle
+			},
+			Health: parseInt(vals["health"]),
+			Team1:  vals["team1"] == "true",
+		}
+		gameState.Fortresses = append(gameState.Fortresses, &f)
+	}
 	return &gameState
 }
 
+func parseInt(s string) int {
+	v, _ := strconv.Atoi(s)
+	return v
+}
 func parseFloat(s string) float64 {
 	v, _ := strconv.ParseFloat(s, 64)
 	return v
