@@ -43,9 +43,15 @@ func WebSocketHandler(c echo.Context) error {
 	ctx := context.Background()
 	val, err := db.Rdb.Get(ctx, userID).Result()
 	if err == redis.Nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "User room not found")
+		ws.WriteMessage(websocket.TextMessage, []byte("User room not found"))
+		ws.Close()
+		log.Printf("User room not found for user %s", userID)
+		return nil
 	} else if err != nil {
-		return errors.New("Error retrieving user data from Redis")
+		ws.WriteMessage(websocket.TextMessage, []byte("Error retrieving user room"))
+		ws.Close()
+		log.Printf("Error retrieving user room for user %s", userID)
+		return nil
 	}
 	game.SubscribeToRoom(val)
 	log.Printf("Player connected: %s", userID)

@@ -60,6 +60,9 @@ func SubscribeToRoom(roomID string) error {
 
 func UnsubscribeFromRoom(roomID string) error {
 	sub := subs[roomID]
+	if sub == nil {
+		return fmt.Errorf("not subscribed to room %s", roomID)
+	}
 	if err := sub.Unsubscribe(ctx, "room:"+roomID); err != nil {
 		return fmt.Errorf("error unsubscribing from room %s: %w", roomID, err)
 	}

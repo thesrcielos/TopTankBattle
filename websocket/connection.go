@@ -14,7 +14,7 @@ import (
 
 func listenPlayerMessages(playerId string, conn *websocket.Conn) {
 	defer func() {
-		state.UnregisterPlayerDelayed(playerId, 40*time.Second, game.LeaveRoom)
+		state.UnregisterPlayerDelayed(playerId, 20*time.Second, game.LeaveRoom)
 		conn.Close()
 	}()
 

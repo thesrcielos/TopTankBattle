@@ -514,7 +514,6 @@ func RevivePlayer(playerId string, gameState *state.GameState) {
 	player := gameState.Players[playerId]
 	player.PlayerMu.Lock()
 	player.Health = 100
-	player.PlayerMu.Unlock()
 	seed := time.Now().UnixNano()
 	source := rand.NewSource(seed)
 	r := rand.New(source)
@@ -524,15 +523,18 @@ func RevivePlayer(playerId string, gameState *state.GameState) {
 		x = 1834
 		angle = math.Pi
 	}
+	pos := state.Position{
+		X:     float64(x),
+		Y:     float64(244 + 80*r.Intn(6)),
+		Angle: angle,
+	}
+	player.Position = pos
+	player.PlayerMu.Unlock()
 	sendGameChangeMessage(gameState.RoomId, GameMessage{
 		Type: "PLAYER_REVIVED",
 		Payload: map[string]interface{}{
 			"playerId": playerId,
-			"position": state.Position{
-				X:     float64(x),
-				Y:     float64(244 + 80*r.Intn(6)),
-				Angle: angle,
-			},
+			"position": pos,
 		},
 		Users: getGamePlayerIds(gameState, ""),
 	})
