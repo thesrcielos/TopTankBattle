@@ -83,10 +83,15 @@ func RegisterPlayer(id string, roomId string, conn *websocket.Conn) {
 
 func UnregisterPlayerDelayed(id string, delay time.Duration, LeaveRoom func(string) error) {
 	go func() {
+		playersMu.Lock()
+		player := players[id]
+		player.Connected = false
+		playersMu.Unlock()
+
 		time.Sleep(delay)
 
 		playersMu.Lock()
-		player := players[id]
+		player = players[id]
 		if player != nil && !player.Connected {
 			delete(players, id)
 			playersMu.Unlock()
