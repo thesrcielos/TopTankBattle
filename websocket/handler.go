@@ -42,6 +42,7 @@ func WebSocketHandler(c echo.Context) error {
 
 	ctx := context.Background()
 	val, err := db.Rdb.Get(ctx, userID).Result()
+	fmt.Println("User room ID:", val)
 	if err == redis.Nil {
 		ws.WriteMessage(websocket.TextMessage, []byte("User room not found"))
 		ws.Close()

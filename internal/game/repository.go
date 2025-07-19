@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -62,6 +63,7 @@ func saveRoom(room Room) error {
 
 func savePlayerRoom(playerRequest *PlayerRequest) error {
 	if err := db.Rdb.Set(ctx, playerRequest.Player, playerRequest.Room, 0).Err(); err != nil {
+		fmt.Println("Error saving player room:", err)
 		return apperrors.NewAppError(500, "Error saving player room", err)
 	}
 
