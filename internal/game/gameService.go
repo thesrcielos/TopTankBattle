@@ -99,8 +99,34 @@ func StartGame(playerId string, roomId string) error {
 	notifyGameStart(gameState)
 	room.Status = "PLAYING"
 	saveRoom(*room)
+	saveGameStateToRedis(gameState)
 	go RunGameLoop(gameState)
+	tryToBecomeLeader(roomId)
+	msg := GameMessage{
+		Type: "GAME_START_INFO",
+		Payload: map[string]string{
+			"roomId":   roomId,
+			"instance": instanceID,
+		},
+	}
+	sendGameChangeMessage(roomId, msg)
 	return nil
+}
+
+func AttemptLeadership(roomId string) {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if tryToBecomeLeader(roomId) {
+			fmt.Printf("[INFO] Instance %s is now leader of the room %s\n", instanceID, roomId)
+
+			// Recuperar estado anterior desde Redis
+			state := restoreGameStateFromRedis(roomId)
+
+			RunGameLoop(state)
+		}
+	}
 }
 
 func notifyGameStart(game *state.GameState) {
@@ -331,21 +357,19 @@ func RunGameLoop(state *state.GameState) {
 	defer ticker.Stop()
 	gameOver := false
 
-	var lastUpdate = time.Now()
+	const fixeDelta = 0.025 // Fixed delta time for physics updates
 	for range ticker.C {
 		if gameOver {
 			break
 		}
+
 		state.GameMu.Lock()
 		const bulletDamage = 20
 
-		now := time.Now()
-		delta := now.Sub(lastUpdate).Seconds()
-		UpdateBullets(state.Bullets, delta)
+		UpdateBullets(state.Bullets, fixeDelta)
 
 		for id, bullet := range state.Bullets {
 			hitPlayer, hitFortress, hitWall := CheckBulletCollision(bullet, state.Players, state.Fortresses)
-
 			if hitWall {
 				delete(state.Bullets, id)
 				continue
@@ -403,8 +427,19 @@ func RunGameLoop(state *state.GameState) {
 				continue
 			}
 		}
-		lastUpdate = now
+		saveGameStateToRedis(state)
 		state.GameMu.Unlock()
+
+		renew, err := RenewLeadership(state.RoomId, 1000*time.Millisecond)
+		if err != nil {
+			continue
+		}
+
+		if !renew {
+			AttemptLeadership(state.RoomId)
+			return
+		}
+
 	}
 }
 

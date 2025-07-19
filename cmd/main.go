@@ -27,6 +27,7 @@ func main() {
 
 	db.Init()
 	db.DB.AutoMigrate(&user.User{})
+	db.DB.AutoMigrate(&user.UserStats{})
 
 	maps.GenerateCollisionMatrix("map.json")
 	e := echo.New()
