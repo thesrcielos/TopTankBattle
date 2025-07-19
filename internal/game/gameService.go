@@ -140,7 +140,7 @@ func notifyGameStart(game *state.GameState) {
 		log.Println("Error encoding message:", err)
 		return
 	}
-	PublishToRoom(game.RoomId, string(msg))
+	PublishToRoom(string(msg))
 }
 
 func setPlayersGameState(gameState *state.GameState) error {
@@ -248,7 +248,7 @@ func sendGameChangeMessage(roomId string, msg GameMessage) {
 		return
 	}
 
-	PublishToRoom(roomId, string(message))
+	PublishToRoom(string(message))
 }
 
 func ShootBullet(bullet *state.Bullet) {

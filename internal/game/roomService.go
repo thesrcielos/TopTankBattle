@@ -193,7 +193,7 @@ func sendRoomChangeMessage(room *Room, message GameMessage) {
 		log.Println("Error encoding message:", err)
 		return
 	}
-	PublishToRoom(room.ID, string(msg))
+	PublishToRoom(string(msg))
 }
 
 func getPlayerFromRoom(playerId string, room *Room) (map[string]interface{}, error) {
@@ -218,9 +218,6 @@ func getPlayerFromRoom(playerId string, room *Room) (map[string]interface{}, err
 
 func notifyOrDeleteRoom(room *Room, playerId string) error {
 	if room.Players == 0 {
-		if err := UnsubscribeFromRoom(room.ID); err != nil {
-			return err
-		}
 		return deleteRoom(room.ID)
 	}
 

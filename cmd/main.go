@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
@@ -13,6 +14,7 @@ import (
 	api_middleware "github.com/thesrcielos/TopTankBattle/api/middleware"
 	v1 "github.com/thesrcielos/TopTankBattle/api/v1"
 	"github.com/thesrcielos/TopTankBattle/internal/apperrors"
+	"github.com/thesrcielos/TopTankBattle/internal/game"
 	"github.com/thesrcielos/TopTankBattle/internal/game/maps"
 	"github.com/thesrcielos/TopTankBattle/internal/user"
 	"github.com/thesrcielos/TopTankBattle/pkg/db"
@@ -72,4 +74,21 @@ func main() {
 		return c.JSON(http.StatusOK, echo.Map{"ok": true})
 	})
 	e.Logger.Fatal(e.Start(":8080"))
+}
+
+func startRedisSubscriber() {
+	go func() {
+		for {
+			log.Println("Intentando suscribirse al canal Redis...")
+			err := game.SubscribeMessages()
+			if err != nil {
+				log.Printf("Fallo al suscribirse: %v", err)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			log.Println("¡Suscripción exitosa!")
+			return
+		}
+	}()
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/redis/go-redis/v9"
-	"github.com/thesrcielos/TopTankBattle/internal/game"
 	"github.com/thesrcielos/TopTankBattle/internal/game/state"
 	"github.com/thesrcielos/TopTankBattle/pkg/db"
 )
@@ -54,7 +53,6 @@ func WebSocketHandler(c echo.Context) error {
 		log.Printf("Error retrieving user room for user %s", userID)
 		return nil
 	}
-	game.SubscribeToRoom(val)
 	log.Printf("Player connected: %s", userID)
 	state.RegisterPlayer(userID, val, ws)
 	go listenPlayerMessages(userID, ws)

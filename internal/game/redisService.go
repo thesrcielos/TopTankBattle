@@ -16,7 +16,6 @@ import (
 	"github.com/thesrcielos/TopTankBattle/websocket/transport"
 )
 
-var subs = make(map[string]*redis.PubSub)
 var instanceID = getEnv("INSTANCE_ID", uuid.New().String())
 
 func getEnv(key, fallback string) string {
@@ -25,49 +24,31 @@ func getEnv(key, fallback string) string {
 	}
 	return fallback
 }
-func PublishToRoom(roomID string, payload string) {
-	err := db.Rdb.Publish(ctx, "room:"+roomID, payload).Err()
+func PublishToRoom(payload string) {
+	err := db.Rdb.Publish(ctx, "messages", payload).Err()
 	if err != nil {
 		log.Println("Error publishing to room:", err)
 	}
 }
 
-func SubscribeToRoom(roomID string) error {
-	if _, exists := subs[roomID]; exists {
-		return nil
-	}
-
-	sub := db.Rdb.Subscribe(ctx, "room:"+roomID)
+func SubscribeMessages() error {
+	sub := db.Rdb.Subscribe(ctx, "messages")
 
 	_, err := sub.Receive(ctx)
 	if err != nil {
-		log.Println("error subscribing to room %s: %w", roomID, err)
-		return fmt.Errorf("error subscribing to room %s: %w", roomID, err)
+		log.Println("error subscribing", err)
+		return fmt.Errorf("error subscribing", err)
 	}
 
 	ch := sub.Channel()
-	subs[roomID] = sub
 
-	log.Printf("Subscribed to room %s", roomID)
+	log.Printf("Subscribed to messages channel")
 	go func() {
 		for msg := range ch {
 			SendReceivedMessage(msg.Payload)
 		}
 	}()
 
-	return nil
-}
-
-func UnsubscribeFromRoom(roomID string) error {
-	sub := subs[roomID]
-	if sub == nil {
-		return fmt.Errorf("not subscribed to room %s", roomID)
-	}
-	if err := sub.Unsubscribe(ctx, "room:"+roomID); err != nil {
-		return fmt.Errorf("error unsubscribing from room %s: %w", roomID, err)
-	}
-
-	delete(subs, roomID)
 	return nil
 }
 
