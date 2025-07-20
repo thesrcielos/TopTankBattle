@@ -30,8 +30,8 @@ func main() {
 	db.Init()
 	db.DB.AutoMigrate(&user.User{})
 	db.DB.AutoMigrate(&user.UserStats{})
-	startRedisSubscriber()
 	maps.GenerateCollisionMatrix("map.json")
+	inyectDependencies()
 	e := echo.New()
 
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
@@ -77,11 +77,27 @@ func main() {
 
 }
 
-func startRedisSubscriber() {
+func inyectDependencies() {
+	var gameService *game.GameService
+	redisRepository := game.NewGameStateRepository(gameService, db.Rdb)
+	userRepository := user.NewUserRepository(db.DB)
+	roomRepository := game.NewRedisRoomRepository(userRepository, db.Rdb)
+	roomService := game.NewRoomService(roomRepository)
+	userService := user.NewUserService(userRepository)
+	gameService = game.NewGameService(redisRepository, roomRepository, roomService, userService)
+	v1.RoomService = roomService
+	v1.UserService = userService
+	websocket.RoomService = roomService
+	websocket.GameService = gameService
+
+	startRedisSubscriber(redisRepository)
+}
+
+func startRedisSubscriber(repo game.GameStateRepository) {
 	go func() {
 		for {
 			log.Println("Intentando suscribirse al canal Redis...")
-			err := game.SubscribeMessages()
+			err := repo.SubscribeMessages()
 			if err != nil {
 				log.Printf("Fallo al suscribirse: %v", err)
 				time.Sleep(1 * time.Second)

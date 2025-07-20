@@ -12,9 +12,11 @@ import (
 	"github.com/thesrcielos/TopTankBattle/websocket/router"
 )
 
+var RoomService *game.RoomService
+
 func listenPlayerMessages(playerId string, conn *websocket.Conn) {
 	defer func() {
-		state.UnregisterPlayerDelayed(playerId, 20*time.Second, game.LeaveRoom)
+		state.UnregisterPlayerDelayed(playerId, 20*time.Second, RoomService.LeaveRoom)
 		conn.Close()
 	}()
 
@@ -31,6 +33,6 @@ func listenPlayerMessages(playerId string, conn *websocket.Conn) {
 			continue
 		}
 
-		router.RouteMessage(playerId, msg)
+		router.RouteMessage(playerId, msg, GameService)
 	}
 }

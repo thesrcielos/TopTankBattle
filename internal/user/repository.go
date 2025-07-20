@@ -4,18 +4,36 @@ import (
 	"errors"
 
 	"github.com/thesrcielos/TopTankBattle/internal/apperrors"
-	"github.com/thesrcielos/TopTankBattle/pkg/db"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
+type UserRepository interface {
+	CreateUser(username, password string) (*User, error)
+	ValidateUser(username, password string) (*User, error)
+	GetUserUsername(id int) (string, error)
+	GetUser(id int) (*User, error)
+	FetchUserStats(userID int) (UserStats, error)
+	UpdateUserStats(stats *UserStats) error
+}
+
+type UserRepositoryImpl struct {
+	db *gorm.DB
+}
+
+func NewUserRepository(db *gorm.DB) UserRepository {
+	return &UserRepositoryImpl{
+		db: db,
+	}
+}
+
 const ERROR_RETRIEVING_USER = "Error retrieving user"
 const ERROR_USER_NOT_FOUND = "User not found"
 
-func CreateUser(username, password string) (*User, error) {
+func (u *UserRepositoryImpl) CreateUser(username, password string) (*User, error) {
 	var newUser *User
 
-	err := db.DB.Transaction(func(tx *gorm.DB) error {
+	err := u.db.Transaction(func(tx *gorm.DB) error {
 		var exists User
 		result := tx.Where("username = ?", username).First(&exists)
 		if result.Error == nil {
@@ -58,9 +76,9 @@ func CreateUser(username, password string) (*User, error) {
 	return newUser, nil
 }
 
-func ValidateUser(username, password string) (*User, error) {
-	var u User
-	result := db.DB.Where("username = ?", username).First(&u)
+func (u *UserRepositoryImpl) ValidateUser(username, password string) (*User, error) {
+	var user User
+	result := u.db.Where("username = ?", username).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, apperrors.NewAppError(404, ERROR_USER_NOT_FOUND, nil)
@@ -68,17 +86,17 @@ func ValidateUser(username, password string) (*User, error) {
 			return nil, apperrors.NewAppError(500, ERROR_RETRIEVING_USER, result.Error)
 		}
 	}
-	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
 		return nil, apperrors.NewAppError(400, "Invalid password", err)
 	}
 
-	return &u, nil
+	return &user, nil
 }
 
-func GetUserUsername(id int) (string, error) {
-	var u User
-	result := db.DB.Where("id = ?", id).First(&u)
+func (u *UserRepositoryImpl) GetUserUsername(id int) (string, error) {
+	var user User
+	result := u.db.Where("id = ?", id).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return "", apperrors.NewAppError(404, ERROR_USER_NOT_FOUND, nil)
@@ -86,12 +104,12 @@ func GetUserUsername(id int) (string, error) {
 			return "", apperrors.NewAppError(500, ERROR_RETRIEVING_USER, result.Error)
 		}
 	}
-	return u.Username, nil
+	return user.Username, nil
 }
 
-func GetUser(id int) (*User, error) {
-	var u User
-	result := db.DB.Where("id = ?", id).First(&u)
+func (u *UserRepositoryImpl) GetUser(id int) (*User, error) {
+	var user User
+	result := u.db.Where("id = ?", id).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, apperrors.NewAppError(404, ERROR_USER_NOT_FOUND, nil)
@@ -100,12 +118,12 @@ func GetUser(id int) (*User, error) {
 		}
 	}
 
-	return &u, nil
+	return &user, nil
 }
 
-func FetchUserStats(userID int) (UserStats, error) {
+func (u *UserRepositoryImpl) FetchUserStats(userID int) (UserStats, error) {
 	var stats UserStats
-	result := db.DB.Where("user_id = ?", userID).First(&stats)
+	result := u.db.Where("user_id = ?", userID).First(&stats)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return UserStats{}, apperrors.NewAppError(404, "User stats not found", nil)
@@ -116,8 +134,8 @@ func FetchUserStats(userID int) (UserStats, error) {
 	return stats, nil
 }
 
-func updateUserStats(stats *UserStats) error {
-	result := db.DB.Save(stats)
+func (u *UserRepositoryImpl) UpdateUserStats(stats *UserStats) error {
+	result := u.db.Save(stats)
 	if result.Error != nil {
 		return apperrors.NewAppError(500, ERROR_RETRIEVING_USER, result.Error)
 	}

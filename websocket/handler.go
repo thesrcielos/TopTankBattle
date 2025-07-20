@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/redis/go-redis/v9"
+	"github.com/thesrcielos/TopTankBattle/internal/game"
 	"github.com/thesrcielos/TopTankBattle/internal/game/state"
 	"github.com/thesrcielos/TopTankBattle/pkg/db"
 )
@@ -24,6 +25,8 @@ var (
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 )
+
+var GameService *game.GameService
 
 func WebSocketHandler(c echo.Context) error {
 	tokenString := c.QueryParam("token")

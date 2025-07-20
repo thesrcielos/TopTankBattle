@@ -9,7 +9,7 @@ import (
 	"github.com/thesrcielos/TopTankBattle/websocket/message"
 )
 
-func HandleShoot(playerId string, msg message.Message) {
+func HandleShoot(playerId string, msg message.Message, game *game.GameService) {
 	var payload struct {
 		OwnerId string  `json:"ownerId"`
 		X       float64 `json:"x"`

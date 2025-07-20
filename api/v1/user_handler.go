@@ -10,6 +10,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+var UserService *user.UserService
+
 func RegisterUserRoutes(g *echo.Group) {
 	g.POST("/signup", SignupHandler)
 	g.POST("/login", LoginHandler)
@@ -21,7 +23,7 @@ func SignupHandler(c echo.Context) error {
 	if err := c.Bind(&u); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request")
 	}
-	token, err := user.Signup(u)
+	token, err := UserService.Signup(u)
 	if err != nil {
 		return err
 	}
@@ -33,7 +35,7 @@ func LoginHandler(c echo.Context) error {
 	if err := c.Bind(&u); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request")
 	}
-	token, err := user.Login(u)
+	token, err := UserService.Login(u)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 	}
@@ -51,7 +53,7 @@ func GetUserStatsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid user ID")
 	}
 
-	stats, errStats := user.GetUserStats(id)
+	stats, errStats := UserService.GetUserStats(id)
 	if errStats != nil {
 		return errStats
 	}

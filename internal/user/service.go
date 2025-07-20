@@ -7,33 +7,41 @@ import (
 	"github.com/thesrcielos/TopTankBattle/internal/apperrors"
 )
 
-func Signup(user User) (string, error) {
-	u, err := CreateUser(user.Username, user.Password)
+type UserService struct {
+	repo UserRepository
+}
+
+func NewUserService(repo UserRepository) *UserService {
+	return &UserService{repo: repo}
+}
+
+func (u *UserService) Signup(user User) (string, error) {
+	userRetrieved, err := u.repo.CreateUser(user.Username, user.Password)
 	if err != nil {
 		return "", err
 	}
 
-	token, errJWT := GenerateJWT(u.ID)
+	token, errJWT := GenerateJWT(userRetrieved.ID)
 	if errJWT != nil {
 		return "", apperrors.NewAppError(500, "error creating jwt token", errJWT)
 	}
 	return token, nil
 }
 
-func Login(user User) (string, error) {
-	u, err := ValidateUser(user.Username, user.Password)
+func (u *UserService) Login(user User) (string, error) {
+	userRetrieved, err := u.repo.ValidateUser(user.Username, user.Password)
 	if err != nil {
 		return "", errors.New("invalid credentials")
 	}
-	token, errJWT := GenerateJWT(u.ID)
+	token, errJWT := GenerateJWT(userRetrieved.ID)
 	if errJWT != nil {
 		return "", apperrors.NewAppError(500, "error creating jwt token", errJWT)
 	}
 	return token, nil
 }
 
-func GetUserStats(userID int) (*UserStatsResponse, error) {
-	user, erruserID := GetUser(userID)
+func (u *UserService) GetUserStats(userID int) (*UserStatsResponse, error) {
+	user, erruserID := u.repo.GetUser(userID)
 	if erruserID != nil {
 		return nil, erruserID
 	}
@@ -42,7 +50,7 @@ func GetUserStats(userID int) (*UserStatsResponse, error) {
 		return nil, apperrors.NewAppError(404, "user not found", errors.New("user not found"))
 	}
 
-	stats, err := FetchUserStats(userID)
+	stats, err := u.repo.FetchUserStats(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +71,8 @@ func GetUserStats(userID int) (*UserStatsResponse, error) {
 	return response, nil
 }
 
-func UpdatePlayerStats(userID int, win bool) error {
-	stats, err := FetchUserStats(userID)
+func (u *UserService) UpdatePlayerStats(userID int, win bool) error {
+	stats, err := u.repo.FetchUserStats(userID)
 	if err != nil {
 		return err
 	}
@@ -76,7 +84,7 @@ func UpdatePlayerStats(userID int, win bool) error {
 	}
 	stats.TotalGames++
 
-	if err := updateUserStats(&stats); err != nil {
+	if err := u.repo.UpdateUserStats(&stats); err != nil {
 		return apperrors.NewAppError(500, "error updating user stats", err)
 	}
 

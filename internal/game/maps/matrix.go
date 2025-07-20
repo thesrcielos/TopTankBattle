@@ -16,7 +16,8 @@ func getAppDir() string {
 }
 
 func ReadMap(path string) (Map, error) {
-	pathDef := filepath.Join(getAppDir(), "map.json")
+
+	pathDef := filepath.Join("map.json")
 	file, errd := os.Open(pathDef)
 	if errd != nil {
 		panic(errd)

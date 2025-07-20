@@ -9,8 +9,16 @@ import (
 	"github.com/thesrcielos/TopTankBattle/internal/game/state"
 )
 
-func CreateRoom(request *RoomRequest) (*Room, error) {
-	val, errDB := getPlayerRoom(strconv.Itoa(request.Player))
+type RoomService struct {
+	repo RoomRepository
+}
+
+func NewRoomService(repo RoomRepository) *RoomService {
+	return &RoomService{repo: repo}
+}
+
+func (r *RoomService) CreateRoom(request *RoomRequest) (*Room, error) {
+	val, errDB := r.repo.GetPlayerRoom(strconv.Itoa(request.Player))
 	if errDB != nil {
 		return nil, errDB
 	}
@@ -19,12 +27,12 @@ func CreateRoom(request *RoomRequest) (*Room, error) {
 		return nil, apperrors.NewAppError(400, "Player already in a room", nil)
 	}
 
-	room, err := saveRoomRequest(request)
+	room, err := r.repo.SaveRoomRequest(request)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := savePlayerRoom(&PlayerRequest{
+	if err := r.repo.SavePlayerRoom(&PlayerRequest{
 		Player: room.Host.ID,
 		Room:   room.ID,
 	}); err != nil {
@@ -34,8 +42,8 @@ func CreateRoom(request *RoomRequest) (*Room, error) {
 	return room, nil
 }
 
-func GetRooms(request *RoomPageRequest) (*[]Room, error) {
-	rooms, err := getRooms(request.Page, request.PageSize)
+func (r *RoomService) GetRooms(request *RoomPageRequest) (*[]Room, error) {
+	rooms, err := r.repo.GetRooms(request.Page, request.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -43,32 +51,32 @@ func GetRooms(request *RoomPageRequest) (*[]Room, error) {
 	return rooms, nil
 }
 
-func JoinRoom(playerRequest *PlayerRequest) (*Room, error) {
-	val, errDB := getPlayerRoom(playerRequest.Player)
+func (r *RoomService) JoinRoom(playerRequest *PlayerRequest) (*Room, error) {
+	val, errDB := r.repo.GetPlayerRoom(playerRequest.Player)
 	if errDB != nil {
 		return nil, errDB
 	}
 	if val != nil {
 		return nil, apperrors.NewAppError(400, "Player already in a room", nil)
 	}
-	room, err := addPlayer(playerRequest)
+	room, err := r.repo.AddPlayer(playerRequest)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := savePlayerRoom(playerRequest); err != nil {
+	if err := r.repo.SavePlayerRoom(playerRequest); err != nil {
 		return nil, err
 	}
 
-	if err := notifyPlayerJoin(room, playerRequest.Player); err != nil {
+	if err := r.notifyPlayerJoin(room, playerRequest.Player); err != nil {
 		return nil, err
 	}
 
 	return room, nil
 }
 
-func LeaveRoom(playerId string) error {
-	val, errDB := getPlayerRoom(playerId)
+func (r *RoomService) LeaveRoom(playerId string) error {
+	val, errDB := r.repo.GetPlayerRoom(playerId)
 	if errDB != nil {
 		return errDB
 	}
@@ -80,34 +88,34 @@ func LeaveRoom(playerId string) error {
 		Room:   val.(string),
 	}
 
-	room, err := removePlayer(playerRequest)
+	room, err := r.repo.RemovePlayer(playerRequest)
 	if err != nil {
 		return err
 	}
 
-	errDb := deletePlayerRoom(playerRequest.Player)
+	errDb := r.repo.DeletePlayerRoom(playerRequest.Player)
 	if errDb != nil {
 		return errDb
 	}
 
-	if err := changeOwnerIfNeeded(playerId, room); err != nil {
+	if err := r.changeOwnerIfNeeded(playerId, room); err != nil {
 		return err
 	}
 
-	if err := notifyOrDeleteRoom(room, playerId); err != nil {
+	if err := r.notifyOrDeleteRoom(room, playerId); err != nil {
 		return err
 	}
 	state.UnregisterPlayer(playerId)
 	return nil
 }
 
-func KickPlayerFromRoom(playerId string, roomId string, playerToKick string) (*Room, error) {
-	room, err := getRoom(roomId)
+func (r *RoomService) KickPlayerFromRoom(playerId string, roomId string, playerToKick string) (*Room, error) {
+	room, err := r.repo.GetRoom(roomId)
 	if err != nil {
 		return nil, err
 	}
 
-	playerRoom, errPR := getPlayerRoom(playerToKick)
+	playerRoom, errPR := r.repo.GetPlayerRoom(playerToKick)
 	if errPR != nil {
 		return nil, errPR
 	}
@@ -129,17 +137,17 @@ func KickPlayerFromRoom(playerId string, roomId string, playerToKick string) (*R
 		Room:   roomId,
 	}
 
-	room, err = removePlayer(playerRequest)
+	room, err = r.repo.RemovePlayer(playerRequest)
 	if err != nil {
 		return nil, err
 	}
 
-	errDb := deletePlayerRoom(playerToKick)
+	errDb := r.repo.DeletePlayerRoom(playerToKick)
 	if errDb != nil {
 		return nil, errDb
 	}
 
-	if err := notifyPlayerKick(room, playerToKick); err != nil {
+	if err := r.notifyPlayerKick(room, playerToKick); err != nil {
 		return nil, err
 	}
 
@@ -148,7 +156,7 @@ func KickPlayerFromRoom(playerId string, roomId string, playerToKick string) (*R
 	return room, nil
 }
 
-func notifyPlayerKick(room *Room, kickedPlayerId string) error {
+func (r *RoomService) notifyPlayerKick(room *Room, kickedPlayerId string) error {
 	message := GameMessage{
 		Type: "ROOM_KICK",
 		Payload: KickPlayerMessage{
@@ -157,12 +165,12 @@ func notifyPlayerKick(room *Room, kickedPlayerId string) error {
 		},
 	}
 	room.Team1 = append(room.Team1, Player{ID: kickedPlayerId})
-	sendRoomChangeMessage(room, message)
+	r.sendRoomChangeMessage(room, message)
 	return nil
 }
 
-func notifyPlayerJoin(room *Room, playerId string) error {
-	player, err := getPlayerFromRoom(playerId, room)
+func (r *RoomService) notifyPlayerJoin(room *Room, playerId string) error {
+	player, err := r.getPlayerFromRoom(playerId, room)
 	if err != nil {
 		return err
 	}
@@ -175,11 +183,11 @@ func notifyPlayerJoin(room *Room, playerId string) error {
 		},
 	}
 
-	sendRoomChangeMessage(room, message)
+	r.sendRoomChangeMessage(room, message)
 	return nil
 }
 
-func sendRoomChangeMessage(room *Room, message GameMessage) {
+func (r *RoomService) sendRoomChangeMessage(room *Room, message GameMessage) {
 	players := make([]string, 0, len(room.Team1)+len(room.Team2))
 	for _, player := range room.Team1 {
 		players = append(players, player.ID)
@@ -193,10 +201,10 @@ func sendRoomChangeMessage(room *Room, message GameMessage) {
 		log.Println("Error encoding message:", err)
 		return
 	}
-	PublishToRoom(string(msg))
+	r.repo.PublishToRoom(string(msg))
 }
 
-func getPlayerFromRoom(playerId string, room *Room) (map[string]interface{}, error) {
+func (r *RoomService) getPlayerFromRoom(playerId string, room *Room) (map[string]interface{}, error) {
 	for _, player := range room.Team1 {
 		if player.ID == playerId {
 			return map[string]interface{}{
@@ -216,9 +224,9 @@ func getPlayerFromRoom(playerId string, room *Room) (map[string]interface{}, err
 	return nil, apperrors.NewAppError(404, "Player not found in room", nil)
 }
 
-func notifyOrDeleteRoom(room *Room, playerId string) error {
+func (r *RoomService) notifyOrDeleteRoom(room *Room, playerId string) error {
 	if room.Players == 0 {
-		return deleteRoom(room.ID)
+		return r.repo.DeleteRoom(room.ID)
 	}
 
 	message := GameMessage{
@@ -229,11 +237,11 @@ func notifyOrDeleteRoom(room *Room, playerId string) error {
 		},
 	}
 
-	sendRoomChangeMessage(room, message)
+	r.sendRoomChangeMessage(room, message)
 	return nil
 }
 
-func changeOwnerIfNeeded(playerID string, room *Room) error {
+func (r *RoomService) changeOwnerIfNeeded(playerID string, room *Room) error {
 	if room.Host.ID != playerID || room.Players == 0 {
 		return nil
 	}
@@ -243,7 +251,7 @@ func changeOwnerIfNeeded(playerID string, room *Room) error {
 	} else {
 		newHost = room.Team2[0]
 	}
-	_, err := changeRoomOwner(room.ID, newHost)
+	_, err := r.repo.ChangeRoomOwner(room.ID, newHost)
 	if err != nil {
 		return err
 	}
@@ -251,8 +259,8 @@ func changeOwnerIfNeeded(playerID string, room *Room) error {
 	return nil
 }
 
-func DeleteRoom(playerId string, roomId string) (*[]Player, error) {
-	room, err := getRoom(roomId)
+func (r *RoomService) DeleteRoom(playerId string, roomId string) (*[]Player, error) {
+	room, err := r.repo.GetRoom(roomId)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +269,7 @@ func DeleteRoom(playerId string, roomId string) (*[]Player, error) {
 		return nil, apperrors.NewAppError(403, "Only the host can delete the room", nil)
 	}
 
-	errDb := deleteRoom(roomId)
+	errDb := r.repo.DeleteRoom(roomId)
 	if errDb != nil {
 		return nil, errDb
 	}
@@ -269,28 +277,15 @@ func DeleteRoom(playerId string, roomId string) (*[]Player, error) {
 	players := []Player{}
 	for _, player := range room.Team1 {
 		players = append(players, player)
-		deletePlayerRoom(player.ID)
+		r.repo.DeletePlayerRoom(player.ID)
 	}
 
 	for _, player := range room.Team2 {
 		players = append(players, player)
-		deletePlayerRoom(player.ID)
+		r.repo.DeletePlayerRoom(player.ID)
 	}
 
 	return &players, nil
-}
-
-func findRoom(key string) (*Room, error) {
-	if len(key) != 8 {
-		return nil, apperrors.NewAppError(400, "Room id must be of 8 characters", nil)
-	}
-
-	room, err := getRoom(key)
-	if err != nil {
-		return nil, err
-	}
-
-	return room, nil
 }
 
 func (r *RoomRequest) Validate() error {

@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/thesrcielos/TopTankBattle/internal/game/state"
-	"github.com/thesrcielos/TopTankBattle/pkg/db"
+
 	"github.com/thesrcielos/TopTankBattle/websocket/transport"
 )
 
@@ -24,16 +24,40 @@ func getEnv(key, fallback string) string {
 	}
 	return fallback
 }
-func PublishToRoom(payload string) {
-	err := db.Rdb.Publish(ctx, "messages", payload).Err()
+
+func NewGameStateRepository(leaderElector LeaderElector, db *redis.Client) *RedisGameStateRepository {
+	return &RedisGameStateRepository{
+		leaderElector: leaderElector,
+		db:            db,
+	}
+}
+
+type GameStateRepository interface {
+	PublishToRoom(payload string)
+	SubscribeMessages() error
+	SendReceivedMessage(messageEncoded string)
+	TryToBecomeLeader(roomID string) bool
+	SaveGameState(gameState *state.GameState)
+	RestoreGameState(roomID string) *state.GameState
+	RenewLeadership(roomID string, expiration time.Duration) (bool, error)
+	updateGamePlayerState(playerId string, position state.Position)
+	updateGameBullets(bullet state.Bullet)
+}
+
+type RedisGameStateRepository struct {
+	leaderElector LeaderElector
+	db            *redis.Client
+}
+
+func (r *RedisGameStateRepository) PublishToRoom(payload string) {
+	err := r.db.Publish(ctx, "messages", payload).Err()
 	if err != nil {
 		log.Println("Error publishing to room:", err)
 	}
 }
 
-func SubscribeMessages() error {
-	sub := db.Rdb.Subscribe(ctx, "messages")
-
+func (r *RedisGameStateRepository) SubscribeMessages() error {
+	sub := r.db.Subscribe(ctx, "messages")
 	_, err := sub.Receive(ctx)
 	if err != nil {
 		log.Println("error subscribing", err)
@@ -45,14 +69,14 @@ func SubscribeMessages() error {
 	log.Printf("Subscribed to messages channel")
 	go func() {
 		for msg := range ch {
-			SendReceivedMessage(msg.Payload)
+			r.SendReceivedMessage(msg.Payload)
 		}
 	}()
 
 	return nil
 }
 
-func SendReceivedMessage(messageEncoded string) {
+func (r *RedisGameStateRepository) SendReceivedMessage(messageEncoded string) {
 	var message GameMessage
 	if err := json.Unmarshal([]byte(messageEncoded), &message); err != nil {
 		log.Println("Error decoding message:", err)
@@ -63,14 +87,14 @@ func SendReceivedMessage(messageEncoded string) {
 		payloadBytes, _ := json.Marshal(message.Payload)
 		var move MovePlayerMessage
 		json.Unmarshal(payloadBytes, &move)
-		updateGamePlayerState(move.PlayerId, move.Position)
+		r.updateGamePlayerState(move.PlayerId, move.Position)
 		return
 	}
 	if message.Type == "GAME_SHOOT" {
 		payloadBytes, _ := json.Marshal(message.Payload)
 		var bullet state.Bullet
 		json.Unmarshal(payloadBytes, &bullet)
-		updateGameBullets(bullet)
+		r.updateGameBullets(bullet)
 		return
 	}
 	if message.Type == "GAME_START_INFO" {
@@ -82,7 +106,7 @@ func SendReceivedMessage(messageEncoded string) {
 			return
 		}
 		if info.Instance != instanceID {
-			AttemptLeadership(info.RoomId)
+			go r.leaderElector.AttemptLeadership(info.RoomId)
 		}
 		return
 	}
@@ -96,7 +120,7 @@ func SendReceivedMessage(messageEncoded string) {
 	}
 }
 
-func updateGamePlayerState(playerId string, position state.Position) {
+func (r *RedisGameStateRepository) updateGamePlayerState(playerId string, position state.Position) {
 	player := state.GetPlayer(playerId)
 	if player == nil || player.GameState == nil {
 		return
@@ -107,7 +131,7 @@ func updateGamePlayerState(playerId string, position state.Position) {
 	game.GameMu.Unlock()
 }
 
-func updateGameBullets(bullet state.Bullet) {
+func (r *RedisGameStateRepository) updateGameBullets(bullet state.Bullet) {
 	player := state.GetPlayer(bullet.OwnerId)
 	if player == nil || player.GameState == nil {
 		return
@@ -128,32 +152,32 @@ type GameInfo struct {
 	RoomId   string `json:"roomId"`
 }
 
-func tryToBecomeLeader(roomID string) bool {
+func (r *RedisGameStateRepository) TryToBecomeLeader(roomID string) bool {
 	key := fmt.Sprintf("leader:%s", roomID)
-	ok, err := db.Rdb.SetNX(ctx, key, instanceID, 5000*time.Millisecond).Result()
+	ok, err := r.db.SetNX(ctx, key, instanceID, 5000*time.Millisecond).Result()
 	if err != nil {
 		return false
 	}
 	return ok
 }
 
-func saveGameStateToRedis(gameState *state.GameState) {
+func (r *RedisGameStateRepository) SaveGameState(gameState *state.GameState) {
 	roomID := gameState.RoomId
 	for _, b := range gameState.Bullets {
 		key := fmt.Sprintf("room:%s:bullet:%s", roomID, b.ID)
-		db.Rdb.HSet(ctx, key, map[string]interface{}{
+		r.db.HSet(ctx, key, map[string]interface{}{
 			"x":       b.Position.X,
 			"y":       b.Position.Y,
 			"angle":   b.Position.Angle,
 			"speed":   b.Speed,
 			"ownerId": b.OwnerId,
 		})
-		db.Rdb.Expire(ctx, key, 10*time.Second)
+		r.db.Expire(ctx, key, 10*time.Second)
 	}
 
 	for _, p := range gameState.Players {
 		key := fmt.Sprintf("room:%s:player:%s", roomID, p.ID)
-		db.Rdb.HSet(ctx, key, map[string]interface{}{
+		r.db.HSet(ctx, key, map[string]interface{}{
 			"x":     p.Position.X,
 			"y":     p.Position.Y,
 			"angle": p.Position.Angle,
@@ -162,7 +186,7 @@ func saveGameStateToRedis(gameState *state.GameState) {
 
 	for _, f := range gameState.Fortresses {
 		key := fmt.Sprintf("room:%s:fortress:%s", roomID, f.ID)
-		db.Rdb.HSet(ctx, key, map[string]interface{}{
+		r.db.HSet(ctx, key, map[string]interface{}{
 			"x":      f.Position.X,
 			"y":      f.Position.Y,
 			"health": f.Health,
@@ -171,7 +195,7 @@ func saveGameStateToRedis(gameState *state.GameState) {
 	}
 }
 
-func restoreGameStateFromRedis(roomID string) *state.GameState {
+func (r *RedisGameStateRepository) RestoreGameState(roomID string) *state.GameState {
 	gameState := state.GameState{
 		RoomId:     roomID,
 		Bullets:    make(map[string]*state.Bullet),
@@ -179,9 +203,9 @@ func restoreGameStateFromRedis(roomID string) *state.GameState {
 		Fortresses: make([]*state.Fortress, 0),
 	}
 
-	keys, _ := db.Rdb.Keys(ctx, fmt.Sprintf("room:%s:bullet:*", roomID)).Result()
+	keys, _ := r.db.Keys(ctx, fmt.Sprintf("room:%s:bullet:*", roomID)).Result()
 	for _, key := range keys {
-		vals, _ := db.Rdb.HGetAll(ctx, key).Result()
+		vals, _ := r.db.HGetAll(ctx, key).Result()
 		b := state.Bullet{
 			ID: key[len(fmt.Sprintf("room:%s:bullet:", roomID)):],
 			Position: state.Position{
@@ -195,9 +219,9 @@ func restoreGameStateFromRedis(roomID string) *state.GameState {
 		gameState.Bullets[b.ID] = &b
 	}
 
-	keys, _ = db.Rdb.Keys(ctx, fmt.Sprintf("room:%s:player:*", roomID)).Result()
+	keys, _ = r.db.Keys(ctx, fmt.Sprintf("room:%s:player:*", roomID)).Result()
 	for _, key := range keys {
-		vals, _ := db.Rdb.HGetAll(ctx, key).Result()
+		vals, _ := r.db.HGetAll(ctx, key).Result()
 		p := state.PlayerState{
 			ID: key[len(fmt.Sprintf("room:%s:player:", roomID)):],
 			Position: state.Position{
@@ -209,9 +233,9 @@ func restoreGameStateFromRedis(roomID string) *state.GameState {
 		gameState.Players[p.ID] = &p
 	}
 
-	keys, _ = db.Rdb.Keys(ctx, fmt.Sprintf("room:%s:fortress:*", roomID)).Result()
+	keys, _ = r.db.Keys(ctx, fmt.Sprintf("room:%s:fortress:*", roomID)).Result()
 	for _, key := range keys {
-		vals, _ := db.Rdb.HGetAll(ctx, key).Result()
+		vals, _ := r.db.HGetAll(ctx, key).Result()
 		f := state.Fortress{
 			ID: key[len(fmt.Sprintf("room:%s:fortress:", roomID)):],
 			Position: state.Position{
@@ -236,13 +260,13 @@ func parseFloat(s string) float64 {
 	return v
 }
 
-func RenewLeadership(roomID string, expiration time.Duration) (bool, error) {
+func (r *RedisGameStateRepository) RenewLeadership(roomID string, expiration time.Duration) (bool, error) {
 	key := fmt.Sprintf("leader:%s", roomID)
 
-	currentLeader, err := db.Rdb.Get(ctx, key).Result()
+	currentLeader, err := r.db.Get(ctx, key).Result()
 	if err == redis.Nil {
 		fmt.Println("No current leader found")
-		if tryToBecomeLeader(roomID) {
+		if r.TryToBecomeLeader(roomID) {
 			return true, nil
 		}
 		return false, nil
@@ -251,7 +275,7 @@ func RenewLeadership(roomID string, expiration time.Duration) (bool, error) {
 	}
 
 	if currentLeader == instanceID {
-		ok, err := db.Rdb.Expire(ctx, key, expiration).Result()
+		ok, err := r.db.Expire(ctx, key, expiration).Result()
 		if !ok || err != nil {
 			return false, errors.New("failed to renew leadership")
 		}

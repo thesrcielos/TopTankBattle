@@ -11,6 +11,8 @@ import (
 
 const INVALID_REQUEST = "invalid request"
 
+var RoomService *game.RoomService
+
 func RegisterRoomRoutes(g *echo.Group) {
 	g.POST("", CreateRoomHandler)
 	g.GET("", GetRoomsHandler)
@@ -24,7 +26,7 @@ func CreateRoomHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, INVALID_REQUEST)
 	}
 
-	room, err := game.CreateRoom(&r)
+	room, err := RoomService.CreateRoom(&r)
 
 	if err != nil {
 		fmt.Println("Error creating room:", err)
@@ -51,7 +53,7 @@ func GetRoomsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, INVALID_REQUEST)
 	}
 
-	rooms, err := game.GetRooms(&game.RoomPageRequest{
+	rooms, err := RoomService.GetRooms(&game.RoomPageRequest{
 		Page:     pageInt,
 		PageSize: pageInt})
 	if err != nil {
@@ -68,7 +70,7 @@ func JoinRoomHandler(c echo.Context) error {
 	if err := c.Bind(&p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, INVALID_REQUEST)
 	}
-	room, err := game.JoinRoom(&p)
+	room, err := RoomService.JoinRoom(&p)
 	if err != nil {
 		return err
 	}
@@ -83,7 +85,7 @@ func LeaveRoomHandler(c echo.Context) error {
 	if playerId == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "playerId is required")
 	}
-	err := game.LeaveRoom(playerId)
+	err := RoomService.LeaveRoom(playerId)
 	if err != nil {
 		return err
 	}
