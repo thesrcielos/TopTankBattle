@@ -15,7 +15,7 @@ var dummyObstacles = [][]bool{
 	{false, false, false, false},
 }
 
-func TestCheckBulletCollision_HitsPlayer(t *testing.T) {
+func TestCheckBulletCollisionHitsPlayer(t *testing.T) {
 	// Given
 	player := &state.PlayerState{
 		ID:       "target",
@@ -59,7 +59,7 @@ func TestCheckBulletCollision_HitsPlayer(t *testing.T) {
 	}
 }
 
-func TestCheckBulletCollision_HitsObstacle(t *testing.T) {
+func TestCheckBulletCollisionHitsObstacle(t *testing.T) {
 	obstacles := [][]bool{
 		{false, false, false},
 		{false, true, false}, // [1][1] es obstáculo
@@ -88,7 +88,7 @@ func TestCheckBulletCollision_HitsObstacle(t *testing.T) {
 	}
 }
 
-func TestCheckBulletCollision_HitsAllyPlayer(t *testing.T) {
+func TestCheckBulletCollisionHitsAllyPlayer(t *testing.T) {
 	bullet := &state.Bullet{
 		OwnerId: "p1",
 		Position: state.Position{
@@ -117,7 +117,7 @@ func TestCheckBulletCollision_HitsAllyPlayer(t *testing.T) {
 	}
 }
 
-func TestCheckBulletCollision_HitsEnemyFortress(t *testing.T) {
+func TestCheckBulletCollisionHitsEnemyFortress(t *testing.T) {
 	bullet := &state.Bullet{
 		OwnerId: "p1",
 		Position: state.Position{
