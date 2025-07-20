@@ -37,7 +37,7 @@ func SubscribeMessages() error {
 	_, err := sub.Receive(ctx)
 	if err != nil {
 		log.Println("error subscribing", err)
-		return fmt.Errorf("error subscribing", err)
+		return fmt.Errorf("error subscribing %w", err)
 	}
 
 	ch := sub.Channel()
