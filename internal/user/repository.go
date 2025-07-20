@@ -9,6 +9,9 @@ import (
 	"gorm.io/gorm"
 )
 
+const ERROR_RETRIEVING_USER = "Error retrieving user"
+const ERROR_USER_NOT_FOUND = "User not found"
+
 func CreateUser(username, password string) (*User, error) {
 	var newUser *User
 
@@ -19,7 +22,7 @@ func CreateUser(username, password string) (*User, error) {
 			return apperrors.NewAppError(409, "User already exists", errors.New("username already exists"))
 		}
 		if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return apperrors.NewAppError(500, "Error retrieving user", result.Error)
+			return apperrors.NewAppError(500, ERROR_RETRIEVING_USER, result.Error)
 		}
 
 		hashed, err := bcrypt.GenerateFromPassword([]byte(password), 14)
@@ -60,9 +63,9 @@ func ValidateUser(username, password string) (*User, error) {
 	result := db.DB.Where("username = ?", username).First(&u)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, apperrors.NewAppError(404, "User not found", errors.New("no stats for user"))
+			return nil, apperrors.NewAppError(404, ERROR_USER_NOT_FOUND, nil)
 		} else {
-			return nil, apperrors.NewAppError(500, "Error retrieving user", result.Error)
+			return nil, apperrors.NewAppError(500, ERROR_RETRIEVING_USER, result.Error)
 		}
 	}
 	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
@@ -78,9 +81,9 @@ func GetUserUsername(id int) (string, error) {
 	result := db.DB.Where("id = ?", id).First(&u)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return "", apperrors.NewAppError(404, "User not found", errors.New("no stats for user"))
+			return "", apperrors.NewAppError(404, ERROR_USER_NOT_FOUND, nil)
 		} else {
-			return "", apperrors.NewAppError(500, "Error retrieving user", result.Error)
+			return "", apperrors.NewAppError(500, ERROR_RETRIEVING_USER, result.Error)
 		}
 	}
 	return u.Username, nil
@@ -91,9 +94,9 @@ func GetUser(id int) (*User, error) {
 	result := db.DB.Where("id = ?", id).First(&u)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, apperrors.NewAppError(404, "User not found", errors.New("no stats for user"))
+			return nil, apperrors.NewAppError(404, ERROR_USER_NOT_FOUND, nil)
 		} else {
-			return nil, apperrors.NewAppError(500, "Error retrieving user", result.Error)
+			return nil, apperrors.NewAppError(500, ERROR_RETRIEVING_USER, result.Error)
 		}
 	}
 
@@ -107,7 +110,7 @@ func FetchUserStats(userID int) (UserStats, error) {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return UserStats{}, apperrors.NewAppError(404, "User stats not found", nil)
 		} else {
-			return UserStats{}, apperrors.NewAppError(500, "Error retrieving user stats", result.Error)
+			return UserStats{}, apperrors.NewAppError(500, ERROR_RETRIEVING_USER, result.Error)
 		}
 	}
 	return stats, nil
@@ -116,7 +119,7 @@ func FetchUserStats(userID int) (UserStats, error) {
 func updateUserStats(stats *UserStats) error {
 	result := db.DB.Save(stats)
 	if result.Error != nil {
-		return apperrors.NewAppError(500, "Error updating user stats", result.Error)
+		return apperrors.NewAppError(500, ERROR_RETRIEVING_USER, result.Error)
 	}
 	return nil
 }

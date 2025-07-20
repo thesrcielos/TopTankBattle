@@ -22,12 +22,12 @@ const MAP_WIDTH = 1984
 func StartGame(playerId string, roomId string) error {
 	room, err := getRoom(roomId)
 	if err != nil {
-		fmt.Println("Error ", err)
+		fmt.Println("Error Obtainig room", err)
 		return err
 	}
 
 	if err := validateRoom(room, playerId); err != nil {
-		fmt.Println("Error ", err)
+		fmt.Println("Error validating room", err)
 		return err
 	}
 
@@ -94,7 +94,7 @@ func StartGame(playerId string, roomId string) error {
 	}
 
 	if err := setPlayersGameState(gameState); err != nil {
-		fmt.Println("Error ", err)
+		fmt.Println("Error setting game state", err)
 		return err
 	}
 
@@ -378,54 +378,15 @@ func RunGameLoop(state *state.GameState) {
 			}
 
 			if hitPlayer != nil {
-				hitPlayer.Health -= bulletDamage
-				delete(state.Bullets, id)
-				if hitPlayer.Health > 0 {
-					sendGameChangeMessage(state.RoomId, GameMessage{
-						Type: "PLAYER_HIT",
-						Payload: map[string]interface{}{
-							"playerId": hitPlayer.ID,
-							"health":   hitPlayer.Health,
-						},
-						Users: users,
-					})
-				} else {
-					sendGameChangeMessage(state.RoomId, GameMessage{
-						Type: "PLAYER_KILLED",
-						Payload: map[string]interface{}{
-							"playerId": hitPlayer.ID,
-						},
-						Users: users,
-					})
-					go RevivePlayer(hitPlayer.ID, state)
-				}
+				HandleHitPlayer(hitPlayer, state, bulletDamage, id, users)
 				continue
 			}
 
 			if hitFortress != nil {
-				hitFortress.Health -= bulletDamage
-				if hitFortress.Health <= 0 {
-					sendGameChangeMessage(state.RoomId, GameMessage{
-						Type: "GAME_OVER",
-						Payload: map[string]interface{}{
-							"team1": !hitFortress.Team1,
-						},
-						Users: users,
-					})
+				if HandleHitFortress(hitFortress, state, bulletDamage, id, users) {
 					gameOver = true
-					FinishGame(state)
 					break
-				} else {
-					sendGameChangeMessage(state.RoomId, GameMessage{
-						Type: "FORTRESS_HIT",
-						Payload: map[string]interface{}{
-							"team1":  hitFortress.Team1,
-							"health": hitFortress.Health,
-						},
-						Users: users,
-					})
 				}
-				delete(state.Bullets, id)
 				continue
 			}
 		}
@@ -441,7 +402,56 @@ func RunGameLoop(state *state.GameState) {
 			AttemptLeadership(state.RoomId)
 			return
 		}
+	}
+}
 
+func HandleHitFortress(hitFortress *state.Fortress, state *state.GameState, bulletDamage int, bulletId string, users []string) bool {
+	hitFortress.Health -= bulletDamage
+	if hitFortress.Health <= 0 {
+		sendGameChangeMessage(state.RoomId, GameMessage{
+			Type: "GAME_OVER",
+			Payload: map[string]interface{}{
+				"team1": !hitFortress.Team1,
+			},
+			Users: users,
+		})
+		FinishGame(state)
+		return true
+	} else {
+		sendGameChangeMessage(state.RoomId, GameMessage{
+			Type: "FORTRESS_HIT",
+			Payload: map[string]interface{}{
+				"team1":  hitFortress.Team1,
+				"health": hitFortress.Health,
+			},
+			Users: users,
+		})
+		delete(state.Bullets, bulletId)
+		return false
+	}
+}
+
+func HandleHitPlayer(hitPlayer *state.PlayerState, state *state.GameState, bulletDamage int, bulletId string, users []string) {
+	hitPlayer.Health -= bulletDamage
+	delete(state.Bullets, bulletId)
+	if hitPlayer.Health > 0 {
+		sendGameChangeMessage(state.RoomId, GameMessage{
+			Type: "PLAYER_HIT",
+			Payload: map[string]interface{}{
+				"playerId": hitPlayer.ID,
+				"health":   hitPlayer.Health,
+			},
+			Users: users,
+		})
+	} else {
+		sendGameChangeMessage(state.RoomId, GameMessage{
+			Type: "PLAYER_KILLED",
+			Payload: map[string]interface{}{
+				"playerId": hitPlayer.ID,
+			},
+			Users: users,
+		})
+		go RevivePlayer(hitPlayer.ID, state)
 	}
 }
 

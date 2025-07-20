@@ -9,6 +9,8 @@ import (
 	"github.com/thesrcielos/TopTankBattle/internal/game"
 )
 
+const INVALID_REQUEST = "invalid request"
+
 func RegisterRoomRoutes(g *echo.Group) {
 	g.POST("", CreateRoomHandler)
 	g.GET("", GetRoomsHandler)
@@ -19,7 +21,7 @@ func RegisterRoomRoutes(g *echo.Group) {
 func CreateRoomHandler(c echo.Context) error {
 	var r game.RoomRequest
 	if err := c.Bind(&r); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid request")
+		return echo.NewHTTPError(http.StatusBadRequest, INVALID_REQUEST)
 	}
 
 	room, err := game.CreateRoom(&r)
@@ -37,16 +39,16 @@ func GetRoomsHandler(c echo.Context) error {
 	page := c.QueryParam("page")
 	pageSize := c.QueryParam("size")
 	if page == "" || pageSize == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid request")
+		return echo.NewHTTPError(http.StatusBadRequest, INVALID_REQUEST)
 	}
 
 	pageInt, err := strconv.Atoi(page)
 	if err != nil || pageInt < 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid page number")
+		return echo.NewHTTPError(http.StatusBadRequest, INVALID_REQUEST)
 	}
 	pageSizeInt, err := strconv.Atoi(pageSize)
 	if err != nil || pageSizeInt <= 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid page size")
+		return echo.NewHTTPError(http.StatusBadRequest, INVALID_REQUEST)
 	}
 
 	rooms, err := game.GetRooms(&game.RoomPageRequest{
@@ -64,7 +66,7 @@ func GetRoomsHandler(c echo.Context) error {
 func JoinRoomHandler(c echo.Context) error {
 	var p game.PlayerRequest
 	if err := c.Bind(&p); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid request")
+		return echo.NewHTTPError(http.StatusBadRequest, INVALID_REQUEST)
 	}
 	room, err := game.JoinRoom(&p)
 	if err != nil {
