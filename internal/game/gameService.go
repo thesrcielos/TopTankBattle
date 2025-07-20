@@ -457,51 +457,121 @@ func HandleHitPlayer(hitPlayer *state.PlayerState, state *state.GameState, bulle
 
 func CheckBulletCollision(bullet *state.Bullet, players map[string]*state.PlayerState, fortresses []*state.Fortress) (*state.PlayerState, *state.Fortress, bool) {
 	const bulletWidth = 12.0
-	x := bullet.Position.X
-	y := bullet.Position.Y
-	col := int(x) / tileSize
-	row := int(y) / tileSize
+	const halfWidth = bulletWidth / 2.0
+	angle := bullet.Position.Angle
+
+	perpX := -math.Sin(angle)
+	perpY := math.Cos(angle)
+
+	centerX := bullet.Position.X
+	centerY := bullet.Position.Y
+
+	leftX := centerX + perpX*halfWidth
+	leftY := centerY + perpY*halfWidth
+
+	rightX := centerX - perpX*halfWidth
+	rightY := centerY - perpY*halfWidth
+
+	checkPoints := []struct{ x, y float64 }{
+		{centerX, centerY},
+		{leftX, leftY},
+		{rightX, rightY},
+	}
+
 	team1 := players[bullet.OwnerId].Team1
 	obstacles := maps.Matrix
 
-	// 2. Check Obstacle collision
-	if row >= 0 && row < len(obstacles) && col >= 0 && col < len(obstacles[0]) {
-		if obstacles[row][col] {
+	// 1. Check Obstacle collision para cada punto
+	for _, point := range checkPoints {
+		col := checkObstacleCollision(point, obstacles)
+		if col {
 			return nil, nil, true
 		}
-	} else {
-		return nil, nil, true
 	}
 
-	// 3. Player Collision
+	// 2. Player Collision
 	for _, p := range players {
 		if p.ID == bullet.OwnerId || p.Health <= 0 {
 			continue
 		}
-
-		collision := rectCollision(bullet.Position, p.Position, 32, 30)
-		if !collision {
-			continue
+		player, hasCollision := checkPlayerCollision(checkPoints, p, team1)
+		if player != nil {
+			return player, nil, false
 		}
-		if p.Team1 == team1 {
+		if hasCollision {
 			return nil, nil, true
 		}
-		return p, nil, false
 	}
 
-	// 4. Fortress Collision
+	// 3. Fortress Collision
 	for _, f := range fortresses {
-		collision := rectCollision(bullet.Position, f.Position, 64, 256)
-		if !collision {
-			continue
+		fortress, hasCollision := checkFortressCollision(checkPoints, f, team1)
+		if fortress != nil {
+			return nil, fortress, false
 		}
-		if f.Team1 == team1 {
+		if hasCollision {
 			return nil, nil, true
 		}
-		return nil, f, false
 	}
 
 	return nil, nil, false
+}
+
+func checkFortressCollision(checkPoints []struct{ x, y float64 }, fortress *state.Fortress, team1 bool) (*state.Fortress, bool) {
+	hasCollision := false
+	for _, point := range checkPoints {
+		bulletPos := state.Position{X: point.x, Y: point.y}
+		collision := rectCollision(bulletPos, fortress.Position, 64, 256)
+		if collision {
+			hasCollision = true
+			break
+		}
+	}
+
+	if !hasCollision {
+		return nil, false
+	}
+
+	if fortress.Team1 == team1 {
+		return nil, true
+	}
+	return fortress, false
+}
+
+func checkPlayerCollision(checkPoints []struct{ x, y float64 }, player *state.PlayerState, team1 bool) (*state.PlayerState, bool) {
+	hasCollision := false
+	for _, point := range checkPoints {
+		bulletPos := state.Position{X: point.x, Y: point.y}
+		fmt.Println(bulletPos, player.Position)
+		collision := rectCollision(bulletPos, player.Position, 32, 30)
+		if collision {
+			hasCollision = true
+			break
+		}
+	}
+
+	if !hasCollision {
+		return nil, false
+	}
+
+	if player.Team1 == team1 {
+		return nil, true
+	}
+	return player, false
+}
+
+func checkObstacleCollision(point struct{ x, y float64 }, obstacles [][]bool) bool {
+	col := int(point.x) / tileSize
+	row := int(point.y) / tileSize
+
+	if row >= 0 && row < len(obstacles) && col >= 0 && col < len(obstacles[0]) {
+		if obstacles[row][col] {
+			return true
+		}
+	} else {
+		return true
+	}
+	return false
 }
 
 func rectCollision(point state.Position, center state.Position, width, height float64) bool {
