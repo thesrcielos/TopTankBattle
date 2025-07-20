@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/thesrcielos/TopTankBattle/internal/apperrors"
 )
@@ -58,5 +59,26 @@ func GetUserStats(userID int) (*UserStatsResponse, error) {
 		Losses:     stats.TotalLosses,
 		WinRate:    winRate,
 	}
+	fmt.Println("User stats:", response)
 	return response, nil
+}
+
+func UpdatePlayerStats(userID int, win bool) error {
+	stats, err := FetchUserStats(userID)
+	if err != nil {
+		return err
+	}
+
+	if win {
+		stats.TotalWins++
+	} else {
+		stats.TotalLosses++
+	}
+	stats.TotalGames++
+
+	if err := updateUserStats(&stats); err != nil {
+		return apperrors.NewAppError(500, "error updating user stats", err)
+	}
+
+	return nil
 }

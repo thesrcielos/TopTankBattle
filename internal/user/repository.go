@@ -105,10 +105,18 @@ func FetchUserStats(userID int) (UserStats, error) {
 	result := db.DB.Where("user_id = ?", userID).First(&stats)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return UserStats{}, apperrors.NewAppError(404, "User stats not found", errors.New("no stats for user"))
+			return UserStats{}, apperrors.NewAppError(404, "User stats not found", nil)
 		} else {
 			return UserStats{}, apperrors.NewAppError(500, "Error retrieving user stats", result.Error)
 		}
 	}
 	return stats, nil
+}
+
+func updateUserStats(stats *UserStats) error {
+	result := db.DB.Save(stats)
+	if result.Error != nil {
+		return apperrors.NewAppError(500, "Error updating user stats", result.Error)
+	}
+	return nil
 }

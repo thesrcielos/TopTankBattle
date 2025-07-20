@@ -30,7 +30,7 @@ func main() {
 	db.Init()
 	db.DB.AutoMigrate(&user.User{})
 	db.DB.AutoMigrate(&user.UserStats{})
-
+	startRedisSubscriber()
 	maps.GenerateCollisionMatrix("map.json")
 	e := echo.New()
 
@@ -74,6 +74,7 @@ func main() {
 		return c.JSON(http.StatusOK, echo.Map{"ok": true})
 	})
 	e.Logger.Fatal(e.Start(":8080"))
+
 }
 
 func startRedisSubscriber() {

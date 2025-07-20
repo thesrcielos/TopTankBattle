@@ -6,11 +6,13 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/thesrcielos/TopTankBattle/internal/apperrors"
 	"github.com/thesrcielos/TopTankBattle/internal/game/maps"
 	"github.com/thesrcielos/TopTankBattle/internal/game/state"
+	"github.com/thesrcielos/TopTankBattle/internal/user"
 )
 
 const tileSize = 32
@@ -541,6 +543,13 @@ func RevivePlayer(playerId string, gameState *state.GameState) {
 }
 
 func FinishGame(game *state.GameState) {
+	team2Wins := true
+	if game.Fortresses[0].Team1 {
+		team2Wins = game.Fortresses[0].Health <= 0
+	} else {
+		team2Wins = game.Fortresses[1].Health <= 0
+	}
+
 	for id, _ := range game.Players {
 		player := state.GetPlayer(id)
 		if player == nil {
@@ -568,6 +577,15 @@ func FinishGame(game *state.GameState) {
 	}
 
 	sendRoomChangeMessage(room, msg)
+	for id, player := range game.Players {
+		userId, err := strconv.Atoi(id)
+		if err != nil {
+			log.Println("Error converting player ID to int:", err)
+			continue
+		}
+		user.UpdatePlayerStats(userId, team2Wins == !player.Team1)
+	}
+
 }
 
 func getGamePlayerIds(game *state.GameState, playerId string) []string {

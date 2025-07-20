@@ -52,8 +52,9 @@ func GetUserStatsHandler(c echo.Context) error {
 	}
 
 	stats, errStats := user.GetUserStats(id)
-	if err != nil {
+	if errStats != nil {
 		return errStats
 	}
-	return c.JSON(http.StatusOK, stats)
+
+	return c.JSON(http.StatusOK, *stats)
 }
