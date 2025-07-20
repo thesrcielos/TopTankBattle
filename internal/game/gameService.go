@@ -45,7 +45,7 @@ func (s *GameService) StartGame(playerId string, roomId string) error {
 		return err
 	}
 
-	if err := s.validateRoom(room, playerId); err != nil {
+	if err := s.ValidateRoom(room, playerId); err != nil {
 		fmt.Println("Error validating room", err)
 		return err
 	}
@@ -112,12 +112,12 @@ func (s *GameService) StartGame(playerId string, roomId string) error {
 		}
 	}
 
-	if err := s.setPlayersGameState(gameState); err != nil {
+	if err := s.SetPlayersGameState(gameState); err != nil {
 		fmt.Println("Error setting game state", err)
 		return err
 	}
 
-	s.notifyGameStart(gameState)
+	s.NotifyGameStart(gameState)
 	room.Status = "PLAYING"
 	s.roomRepo.SaveRoom(room)
 	s.repo.SaveGameState(gameState)
@@ -130,27 +130,11 @@ func (s *GameService) StartGame(playerId string, roomId string) error {
 			"instance": instanceID,
 		},
 	}
-	s.sendGameChangeMessage(roomId, msg)
+	s.SendGameChangeMessage(roomId, msg)
 	return nil
 }
 
-func (s *GameService) AttemptLeadership(roomId string) {
-	ticker := time.NewTicker(1000 * time.Millisecond)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		if s.repo.TryToBecomeLeader(roomId) {
-			fmt.Printf("[INFO] Instance %s is now leader of the room %s\n", instanceID, roomId)
-
-			// Recuperar estado anterior desde Redis
-			state := s.repo.RestoreGameState(roomId)
-
-			s.RunGameLoop(state)
-		}
-	}
-}
-
-func (s *GameService) notifyGameStart(game *state.GameState) {
+func (s *GameService) NotifyGameStart(game *state.GameState) {
 	message := GameMessage{
 		Type:    "GAME_START",
 		Payload: game,
@@ -164,7 +148,7 @@ func (s *GameService) notifyGameStart(game *state.GameState) {
 	s.repo.PublishToRoom(string(msg))
 }
 
-func (s *GameService) setPlayersGameState(gameState *state.GameState) error {
+func (s *GameService) SetPlayersGameState(gameState *state.GameState) error {
 	if gameState == nil {
 		return apperrors.NewAppError(400, "Cannot start game: game state is nil", nil)
 	}
@@ -187,7 +171,23 @@ func (s *GameService) setPlayersGameState(gameState *state.GameState) error {
 	return nil
 }
 
-func (s *GameService) validateRoom(room *Room, playerId string) error {
+func (s *GameService) AttemptLeadership(roomId string) {
+	ticker := time.NewTicker(1000 * time.Millisecond)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if s.repo.TryToBecomeLeader(roomId) {
+			fmt.Printf("[INFO] Instance %s is now leader of the room %s\n", instanceID, roomId)
+
+			// Recuperar estado anterior desde Redis
+			state := s.repo.RestoreGameState(roomId)
+
+			s.RunGameLoop(state)
+		}
+	}
+}
+
+func (s *GameService) ValidateRoom(room *Room, playerId string) error {
 	if room == nil {
 		return apperrors.NewAppError(400, "Cannot start game: room does not exist", nil)
 	}
@@ -232,7 +232,7 @@ func (s *GameService) MovePlayer(playerId string, newPosition state.Position) {
 
 	if player.GameState == nil {
 		message.Users = s.getPlayerIdsFromRoom(player.RoomId, player.ID)
-		s.sendGameChangeMessage(player.RoomId, message)
+		s.SendGameChangeMessage(player.RoomId, message)
 		gameMessage := GameMessage{
 			Type: "GAME_MOVE",
 			Payload: MoveMessage{
@@ -240,7 +240,7 @@ func (s *GameService) MovePlayer(playerId string, newPosition state.Position) {
 				Position: newPosition,
 			},
 		}
-		s.sendGameChangeMessage(player.RoomId, gameMessage)
+		s.SendGameChangeMessage(player.RoomId, gameMessage)
 		return
 	}
 
@@ -254,10 +254,10 @@ func (s *GameService) MovePlayer(playerId string, newPosition state.Position) {
 
 	playerState.Position = newPosition
 	playerState.PlayerMu.Unlock()
-	s.sendGameChangeMessage(player.GameState.RoomId, message)
+	s.SendGameChangeMessage(player.GameState.RoomId, message)
 }
 
-func (s *GameService) sendGameChangeMessage(roomId string, msg GameMessage) {
+func (s *GameService) SendGameChangeMessage(roomId string, msg GameMessage) {
 	if roomId == "" {
 		log.Println("Game state is nil")
 		return
@@ -291,13 +291,13 @@ func (s *GameService) ShootBullet(bullet *state.Bullet) {
 			OwnerId:  bullet.OwnerId,
 		}
 		msg.Users = players
-		s.sendGameChangeMessage(player.RoomId, msg)
+		s.SendGameChangeMessage(player.RoomId, msg)
 
 		gameMessage := GameMessage{
 			Type:    "GAME_SHOOT",
 			Payload: bullet,
 		}
-		s.sendGameChangeMessage(player.RoomId, gameMessage)
+		s.SendGameChangeMessage(player.RoomId, gameMessage)
 		return
 	}
 
@@ -322,7 +322,7 @@ func (s *GameService) ShootBullet(bullet *state.Bullet) {
 	game.GameMu.Lock()
 	game.Bullets[bullet.ID] = bullet
 	game.GameMu.Unlock()
-	s.sendGameChangeMessage(game.RoomId, msg)
+	s.SendGameChangeMessage(game.RoomId, msg)
 }
 
 func (s *GameService) getPlayerIdsFromRoomAndTeam(roomId string, playerId string) ([]string, bool) {
@@ -428,7 +428,7 @@ func (s *GameService) RunGameLoop(state *state.GameState) {
 func (s *GameService) HandleHitFortress(hitFortress *state.Fortress, state *state.GameState, bulletDamage int, bulletId string, users []string) bool {
 	hitFortress.Health -= bulletDamage
 	if hitFortress.Health <= 0 {
-		s.sendGameChangeMessage(state.RoomId, GameMessage{
+		s.SendGameChangeMessage(state.RoomId, GameMessage{
 			Type: "GAME_OVER",
 			Payload: map[string]interface{}{
 				"team1": !hitFortress.Team1,
@@ -438,7 +438,7 @@ func (s *GameService) HandleHitFortress(hitFortress *state.Fortress, state *stat
 		s.FinishGame(state)
 		return true
 	} else {
-		s.sendGameChangeMessage(state.RoomId, GameMessage{
+		s.SendGameChangeMessage(state.RoomId, GameMessage{
 			Type: "FORTRESS_HIT",
 			Payload: map[string]interface{}{
 				"team1":  hitFortress.Team1,
@@ -455,7 +455,7 @@ func (s *GameService) HandleHitPlayer(hitPlayer *state.PlayerState, state *state
 	hitPlayer.Health -= bulletDamage
 	delete(state.Bullets, bulletId)
 	if hitPlayer.Health > 0 {
-		s.sendGameChangeMessage(state.RoomId, GameMessage{
+		s.SendGameChangeMessage(state.RoomId, GameMessage{
 			Type: "PLAYER_HIT",
 			Payload: map[string]interface{}{
 				"playerId": hitPlayer.ID,
@@ -464,7 +464,7 @@ func (s *GameService) HandleHitPlayer(hitPlayer *state.PlayerState, state *state
 			Users: users,
 		})
 	} else {
-		s.sendGameChangeMessage(state.RoomId, GameMessage{
+		s.SendGameChangeMessage(state.RoomId, GameMessage{
 			Type: "PLAYER_KILLED",
 			Payload: map[string]interface{}{
 				"playerId": hitPlayer.ID,
@@ -631,7 +631,7 @@ func (s *GameService) RevivePlayer(playerId string, gameState *state.GameState) 
 	}
 	player.Position = pos
 	player.PlayerMu.Unlock()
-	s.sendGameChangeMessage(gameState.RoomId, GameMessage{
+	s.SendGameChangeMessage(gameState.RoomId, GameMessage{
 		Type: "PLAYER_REVIVED",
 		Payload: map[string]interface{}{
 			"playerId": playerId,

@@ -40,8 +40,8 @@ type GameStateRepository interface {
 	SaveGameState(gameState *state.GameState)
 	RestoreGameState(roomID string) *state.GameState
 	RenewLeadership(roomID string, expiration time.Duration) (bool, error)
-	updateGamePlayerState(playerId string, position state.Position)
-	updateGameBullets(bullet state.Bullet)
+	UpdateGamePlayerState(playerId string, position state.Position)
+	UpdateGameBullets(bullet state.Bullet)
 }
 
 type RedisGameStateRepository struct {
@@ -87,14 +87,14 @@ func (r *RedisGameStateRepository) SendReceivedMessage(messageEncoded string) {
 		payloadBytes, _ := json.Marshal(message.Payload)
 		var move MovePlayerMessage
 		json.Unmarshal(payloadBytes, &move)
-		r.updateGamePlayerState(move.PlayerId, move.Position)
+		r.UpdateGamePlayerState(move.PlayerId, move.Position)
 		return
 	}
 	if message.Type == "GAME_SHOOT" {
 		payloadBytes, _ := json.Marshal(message.Payload)
 		var bullet state.Bullet
 		json.Unmarshal(payloadBytes, &bullet)
-		r.updateGameBullets(bullet)
+		r.UpdateGameBullets(bullet)
 		return
 	}
 	if message.Type == "GAME_START_INFO" {
@@ -120,7 +120,7 @@ func (r *RedisGameStateRepository) SendReceivedMessage(messageEncoded string) {
 	}
 }
 
-func (r *RedisGameStateRepository) updateGamePlayerState(playerId string, position state.Position) {
+func (r *RedisGameStateRepository) UpdateGamePlayerState(playerId string, position state.Position) {
 	player := state.GetPlayer(playerId)
 	if player == nil || player.GameState == nil {
 		return
@@ -131,7 +131,7 @@ func (r *RedisGameStateRepository) updateGamePlayerState(playerId string, positi
 	game.GameMu.Unlock()
 }
 
-func (r *RedisGameStateRepository) updateGameBullets(bullet state.Bullet) {
+func (r *RedisGameStateRepository) UpdateGameBullets(bullet state.Bullet) {
 	player := state.GetPlayer(bullet.OwnerId)
 	if player == nil || player.GameState == nil {
 		return

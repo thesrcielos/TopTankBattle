@@ -1,5 +1,49 @@
 package game
 
+import (
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/thesrcielos/TopTankBattle/internal/game/maps"
+	"github.com/thesrcielos/TopTankBattle/internal/game/state"
+	"github.com/thesrcielos/TopTankBattle/internal/user"
+)
+
+var (
+	mockRoomRepo RoomRepository
+	mockGameRepo GameStateRepository
+	mockUserRepo user.UserRepository
+
+	roomService *RoomService
+	userService *user.UserService
+)
+
+func TestMain(m *testing.M) {
+	// Mock Repositories
+	mockRoomRepo = new(RoomRepositoryMock)
+	mockGameRepo = new(GameStateRepositoryMock)
+	mockUserRepo = new(MockUserRepository)
+
+	roomService = NewRoomService(mockRoomRepo)
+	userService = user.NewUserService(mockUserRepo)
+
+	code := m.Run()
+	os.Exit(code)
+}
+
+func TestValidateRoom_Ok(t *testing.T) {
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
+	room := &Room{
+		Host:   Player{ID: "host"},
+		Status: "LOBBY",
+		Team1:  []Player{{ID: "p1"}},
+		Team2:  []Player{{ID: "p2"}},
+	}
+	err := gameService.ValidateRoom(room, "host")
+	require.NoError(t, err)
+}
+
 var dummyObstacles = [][]bool{
 	{false, false, false, false},
 	{false, false, false, false},
@@ -7,8 +51,8 @@ var dummyObstacles = [][]bool{
 	{false, false, false, false},
 }
 
-/*
 func TestCheckBulletCollisionHitsPlayer(t *testing.T) {
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
 	// Given
 	player := &state.PlayerState{
 		ID:       "target",
@@ -38,7 +82,7 @@ func TestCheckBulletCollisionHitsPlayer(t *testing.T) {
 	maps.Matrix = dummyObstacles
 
 	// When
-	pHit, fHit, destroyed := CheckBulletCollision(bullet, players, fortresses)
+	pHit, fHit, destroyed := gameService.CheckBulletCollision(bullet, players, fortresses)
 
 	//Then
 	if pHit == nil || pHit.ID != "target" {
@@ -53,6 +97,7 @@ func TestCheckBulletCollisionHitsPlayer(t *testing.T) {
 }
 
 func TestCheckBulletCollisionHitsObstacle(t *testing.T) {
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
 	obstacles := [][]bool{
 		{false, false, false},
 		{false, true, false}, // [1][1] es obstáculo
@@ -72,7 +117,7 @@ func TestCheckBulletCollisionHitsObstacle(t *testing.T) {
 		"p1": {ID: "p1", Team1: true},
 	}
 
-	p, f, destroyed := CheckBulletCollision(bullet, players, nil)
+	p, f, destroyed := gameService.CheckBulletCollision(bullet, players, nil)
 	if !destroyed {
 		t.Errorf("Expected bullet to be destroyed by obstacle")
 	}
@@ -82,6 +127,7 @@ func TestCheckBulletCollisionHitsObstacle(t *testing.T) {
 }
 
 func TestCheckBulletCollisionHitsAllyPlayer(t *testing.T) {
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
 	bullet := &state.Bullet{
 		OwnerId: "p1",
 		Position: state.Position{
@@ -101,7 +147,7 @@ func TestCheckBulletCollisionHitsAllyPlayer(t *testing.T) {
 	}
 	maps.Matrix = dummyObstacles
 
-	p, f, destroyed := CheckBulletCollision(bullet, players, nil)
+	p, f, destroyed := gameService.CheckBulletCollision(bullet, players, nil)
 	if destroyed == false {
 		t.Errorf("Expected bullet to be destroyed by ally collision")
 	}
@@ -111,6 +157,7 @@ func TestCheckBulletCollisionHitsAllyPlayer(t *testing.T) {
 }
 
 func TestCheckBulletCollisionHitsEnemyFortress(t *testing.T) {
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
 	bullet := &state.Bullet{
 		OwnerId: "p1",
 		Position: state.Position{
@@ -131,7 +178,7 @@ func TestCheckBulletCollisionHitsEnemyFortress(t *testing.T) {
 	}
 	maps.Matrix = dummyObstacles
 
-	p, f, destroyed := CheckBulletCollision(bullet, players, fortresses)
+	p, f, destroyed := gameService.CheckBulletCollision(bullet, players, fortresses)
 	if f == nil || f.ID != "f1" {
 		t.Errorf("Expected enemy fortress hit")
 	}
@@ -142,4 +189,3 @@ func TestCheckBulletCollisionHitsEnemyFortress(t *testing.T) {
 		t.Errorf("Expected bullet not destroyed")
 	}
 }
-*/
