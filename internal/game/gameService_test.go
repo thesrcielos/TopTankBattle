@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestValidateRoom_Ok(t *testing.T) {
+func TestValidateRoomOk(t *testing.T) {
 	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
 	room := &Room{
 		Host:   Player{ID: "host"},
@@ -192,7 +192,7 @@ func TestCheckBulletCollisionHitsEnemyFortress(t *testing.T) {
 	}
 }
 
-func TestStartGame_Success(t *testing.T) {
+func TestStartGameSuccess(t *testing.T) {
 	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
 	// Datos simulados
 	playerID := "player1"
@@ -228,7 +228,7 @@ func TestStartGame_Success(t *testing.T) {
 	mockGameRepo.AssertCalled(t, "TryToBecomeLeader", roomID)
 }
 
-func TestHandleHitPlayer_PlayerHitAndKilled(t *testing.T) {
+func TestHandleHitPlayerPlayerHitAndKilled(t *testing.T) {
 	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
 	gameState := &state.GameState{
 		RoomId:  "room1",
@@ -237,7 +237,7 @@ func TestHandleHitPlayer_PlayerHitAndKilled(t *testing.T) {
 	}
 	users := []string{"p2"}
 	mockGameRepo.On("PublishToRoom", mock.Anything).Return()
-	// Should trigger PLAYER_KILLED and call RevivePlayer (which is async)
+
 	gameService.HandleHitPlayer(gameState.Players["p1"], gameState, 20, "b1", users)
 	assert.Equal(t, 0, gameState.Players["p1"].Health)
 	_, exists := gameState.Bullets["b1"]
@@ -245,7 +245,7 @@ func TestHandleHitPlayer_PlayerHitAndKilled(t *testing.T) {
 	mockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
 }
 
-func TestHandleHitPlayer_PlayerHitButNotKilled(t *testing.T) {
+func TestHandleHitPlayerPlayerHitButNotKilled(t *testing.T) {
 	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
 	gameState := &state.GameState{
 		RoomId:  "room1",
@@ -261,7 +261,7 @@ func TestHandleHitPlayer_PlayerHitButNotKilled(t *testing.T) {
 	mockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
 }
 
-func TestHandleHitFortress_Destroyed(t *testing.T) {
+func TestHandleHitFortressDestroyed(t *testing.T) {
 	fortress := &state.Fortress{ID: "f1", Health: 20, Team1: true}
 	gameState := &state.GameState{RoomId: "room1", Bullets: map[string]*state.Bullet{"b1": {}}, Fortresses: []*state.Fortress{fortress}}
 	users := []string{"p1", "p2"}
@@ -280,7 +280,7 @@ func TestHandleHitFortress_Destroyed(t *testing.T) {
 	mockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
 }
 
-func TestHandleHitFortress_NotDestroyed(t *testing.T) {
+func TestHandleHitFortressNotDestroyed(t *testing.T) {
 	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
 	fortress := &state.Fortress{ID: "f1", Health: 100, Team1: true}
 	gameState := &state.GameState{RoomId: "room1", Bullets: map[string]*state.Bullet{"b1": {}}, Fortresses: []*state.Fortress{fortress}}
@@ -414,7 +414,7 @@ func TestShootBulletSendsMessageWithGameState(t *testing.T) {
 	localMockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
 }
 
-func TestMovePlayer_WithGameState_PlayerAlive(t *testing.T) {
+func TestMovePlayerWithGameStatePlayerAlive(t *testing.T) {
 	localMockGameRepo := new(MockGameStateRepository)
 	localMockRoomRepo := new(MockRoomRepository)
 	localRoomService := NewRoomService(localMockRoomRepo)
@@ -439,7 +439,7 @@ func TestMovePlayer_WithGameState_PlayerAlive(t *testing.T) {
 	localMockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
 }
 
-func TestValidateRoom_Errors(t *testing.T) {
+func TestValidateRoomErrors(t *testing.T) {
 	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
 
 	room := &Room{Host: Player{ID: "host"}, Status: "LOBBY", Team1: []Player{{ID: "p1"}}, Team2: []Player{{ID: "p2"}}}

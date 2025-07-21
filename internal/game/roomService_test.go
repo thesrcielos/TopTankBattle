@@ -13,7 +13,7 @@ func newTestRoomService(t *testing.T) (*RoomService, *MockRoomRepository) {
 	return rs, mockRepo
 }
 
-func TestRoomServiceCreateRoom_Success(t *testing.T) {
+func TestRoomServiceCreateRoomSuccess(t *testing.T) {
 	rs, mockRepo := newTestRoomService(t)
 	roomReq := &RoomRequest{Name: "TestRoom", Player: 1, Capacity: 2}
 	mockRepo.On("GetPlayerRoom", "1").Return(nil, nil)
@@ -142,7 +142,7 @@ func TestRoomServiceGetRoomsError(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestRoomRequest_Validate(t *testing.T) {
+func TestRoomRequestValidate(t *testing.T) {
 	r := &RoomRequest{Name: "Sala", Player: 1, Capacity: 3}
 	err := r.Validate()
 	assert.Error(t, err)
@@ -156,4 +156,27 @@ func TestRoomRequest_Validate(t *testing.T) {
 	r = &RoomRequest{Name: "SalaValida", Player: 1, Capacity: 4}
 	err = r.Validate()
 	assert.NoError(t, err)
+}
+
+func TestRoomServiceGetPlayerFromRoom(t *testing.T) {
+	rs, _ := newTestRoomService(t)
+	room := &Room{
+		ID:    "room1",
+		Team1: []Player{{ID: "p1"}},
+		Team2: []Player{{ID: "p2"}},
+	}
+
+	result, err := rs.getPlayerFromRoom("p1", room)
+	assert.NoError(t, err)
+	assert.Equal(t, Player{ID: "p1"}, result["player"])
+	assert.Equal(t, 1, result["team"])
+
+	result, err = rs.getPlayerFromRoom("p2", room)
+	assert.NoError(t, err)
+	assert.Equal(t, Player{ID: "p2"}, result["player"])
+	assert.Equal(t, 2, result["team"])
+
+	result, err = rs.getPlayerFromRoom("p3", room)
+	assert.Error(t, err)
+	assert.Nil(t, result)
 }
