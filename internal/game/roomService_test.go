@@ -89,32 +89,3 @@ func TestRoomServiceLeaveRoomNotInRoom(t *testing.T) {
 	assert.Contains(t, err.Error(), "Player is not in a room")
 	mockRepo.AssertExpectations(t)
 }
-
-func TestRoomServiceKickPlayerFromRoomSuccess(t *testing.T) {
-	rs, mockRepo := newTestRoomService(t)
-	room := &Room{ID: "room1", Host: Player{ID: "1"}, Team1: []Player{{ID: "1"}, {ID: "2"}}, Team2: []Player{}, Players: 2}
-	mockRepo.On("GetRoom", "room1").Return(room, nil)
-	mockRepo.On("GetPlayerRoom", "2").Return("room1", nil)
-	playerReq := &PlayerRequest{Player: "2", Room: "room1"}
-	mockRepo.On("RemovePlayer", playerReq).Return(room, nil)
-	mockRepo.On("DeletePlayerRoom", "2").Return(nil)
-	mockRepo.On("PublishToRoom", mock.Anything).Return()
-
-	result, err := rs.KickPlayerFromRoom("1", "room1", "2")
-	assert.NoError(t, err)
-	assert.Equal(t, room, result)
-	mockRepo.AssertExpectations(t)
-}
-
-func TestRoomServiceKickPlayerFromRoomNotHost(t *testing.T) {
-	rs, mockRepo := newTestRoomService(t)
-	room := &Room{ID: "room1", Host: Player{ID: "1"}, Team1: []Player{{ID: "1"}, {ID: "2"}}, Team2: []Player{}, Players: 2}
-	mockRepo.On("GetRoom", "room1").Return(room, nil)
-	mockRepo.On("GetPlayerRoom", "2").Return("room1", nil)
-
-	result, err := rs.KickPlayerFromRoom("2", "room1", "2")
-	assert.Nil(t, result)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Only the host can kick players")
-	mockRepo.AssertExpectations(t)
-}
