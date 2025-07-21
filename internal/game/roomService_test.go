@@ -141,3 +141,19 @@ func TestRoomServiceGetRoomsError(t *testing.T) {
 	assert.Nil(t, result)
 	mockRepo.AssertExpectations(t)
 }
+
+func TestRoomRequest_Validate(t *testing.T) {
+	r := &RoomRequest{Name: "Sala", Player: 1, Capacity: 3}
+	err := r.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "capacity must be 2, 4, or 6")
+
+	r = &RoomRequest{Name: "abcdefghijklmnopqrstuvwxyz1234567890", Player: 1, Capacity: 2}
+	err = r.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "name must not exceed 30 characters")
+
+	r = &RoomRequest{Name: "SalaValida", Player: 1, Capacity: 4}
+	err = r.Validate()
+	assert.NoError(t, err)
+}

@@ -413,3 +413,65 @@ func TestShootBulletSendsMessageWithGameState(t *testing.T) {
 	gameService.ShootBullet(bullet)
 	localMockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
 }
+
+func TestMovePlayer_WithGameState_PlayerAlive(t *testing.T) {
+	localMockGameRepo := new(MockGameStateRepository)
+	localMockRoomRepo := new(MockRoomRepository)
+	localRoomService := NewRoomService(localMockRoomRepo)
+	localUserService := user.NewUserService(mockUserRepo)
+	gameService := NewGameService(localMockGameRepo, localMockRoomRepo, localRoomService, localUserService)
+
+	playerId := "p1"
+	roomId := "room1"
+	pos := state.Position{X: 10, Y: 20, Angle: 0}
+	state.RegisterPlayer(playerId, roomId, nil)
+	playerConn := state.GetPlayer(playerId)
+	// Simula que está en partida y vivo
+	gs := &state.GameState{
+		RoomId:  roomId,
+		Players: map[string]*state.PlayerState{playerId: {ID: playerId, Health: 100, Team1: true}},
+		Bullets: map[string]*state.Bullet{},
+	}
+	playerConn.GameState = gs
+	localMockGameRepo.On("PublishToRoom", mock.Anything).Return()
+
+	gameService.MovePlayer(playerId, pos)
+	localMockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
+}
+
+func TestValidateRoom_Errors(t *testing.T) {
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
+
+	room := &Room{Host: Player{ID: "host"}, Status: "LOBBY", Team1: []Player{{ID: "p1"}}, Team2: []Player{{ID: "p2"}}}
+	err := gameService.ValidateRoom(nil, "host")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "room does not exist")
+
+	err = gameService.ValidateRoom(room, "notHost")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Only the host can start the game")
+
+	room.Status = "PLAYING"
+	err = gameService.ValidateRoom(room, "host")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "room is not in LOBBY status")
+
+	room.Status = "LOBBY"
+	room.Team1 = []Player{}
+	room.Team2 = []Player{}
+	err = gameService.ValidateRoom(room, "host")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not enough players")
+
+	room.Team1 = []Player{{ID: "p1"}, {ID: "p2"}, {ID: "p3"}, {ID: "p4"}, {ID: "p5"}}
+	room.Team2 = []Player{{ID: "p6"}}
+	err = gameService.ValidateRoom(room, "host")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "too many players")
+
+	room.Team1 = []Player{{ID: "p1"}, {ID: "p2"}, {ID: "p3"}}
+	room.Team2 = []Player{{ID: "p4"}}
+	err = gameService.ValidateRoom(room, "host")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "teams must have at most 1 player more than the other team")
+}
