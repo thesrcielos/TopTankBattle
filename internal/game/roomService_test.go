@@ -13,7 +13,7 @@ func newTestRoomService(t *testing.T) (*RoomService, *MockRoomRepository) {
 	return rs, mockRepo
 }
 
-func TestRoomService_CreateRoom_Success(t *testing.T) {
+func TestRoomServiceCreateRoom_Success(t *testing.T) {
 	rs, mockRepo := newTestRoomService(t)
 	roomReq := &RoomRequest{Name: "TestRoom", Player: 1, Capacity: 2}
 	mockRepo.On("GetPlayerRoom", "1").Return(nil, nil)
@@ -27,7 +27,7 @@ func TestRoomService_CreateRoom_Success(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestRoomService_CreateRoom_PlayerAlreadyInRoom(t *testing.T) {
+func TestRoomServiceCreateRoomPlayerAlreadyInRoom(t *testing.T) {
 	rs, mockRepo := newTestRoomService(t)
 	roomReq := &RoomRequest{Name: "TestRoom", Player: 1, Capacity: 2}
 	mockRepo.On("GetPlayerRoom", "1").Return("room1", nil)
@@ -39,7 +39,7 @@ func TestRoomService_CreateRoom_PlayerAlreadyInRoom(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestRoomService_JoinRoom_Success(t *testing.T) {
+func TestRoomServiceJoinRoomSuccess(t *testing.T) {
 	rs, mockRepo := newTestRoomService(t)
 	playerReq := &PlayerRequest{Player: "2", Room: "room1"}
 	mockRepo.On("GetPlayerRoom", "2").Return(nil, nil)
@@ -54,7 +54,7 @@ func TestRoomService_JoinRoom_Success(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestRoomService_JoinRoom_AlreadyInRoom(t *testing.T) {
+func TestRoomServiceJoinRoomAlreadyInRoom(t *testing.T) {
 	rs, mockRepo := newTestRoomService(t)
 	playerReq := &PlayerRequest{Player: "2", Room: "room1"}
 	mockRepo.On("GetPlayerRoom", "2").Return("room1", nil)
@@ -66,7 +66,7 @@ func TestRoomService_JoinRoom_AlreadyInRoom(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestRoomService_LeaveRoom_Success(t *testing.T) {
+func TestRoomServiceLeaveRoomSuccess(t *testing.T) {
 	rs, mockRepo := newTestRoomService(t)
 	mockRepo.On("GetPlayerRoom", "2").Return("room1", nil)
 	playerReq := &PlayerRequest{Player: "2", Room: "room1"}
@@ -80,7 +80,7 @@ func TestRoomService_LeaveRoom_Success(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestRoomService_LeaveRoom_NotInRoom(t *testing.T) {
+func TestRoomServiceLeaveRoomNotInRoom(t *testing.T) {
 	rs, mockRepo := newTestRoomService(t)
 	mockRepo.On("GetPlayerRoom", "2").Return(nil, nil)
 
@@ -90,7 +90,7 @@ func TestRoomService_LeaveRoom_NotInRoom(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestRoomService_KickPlayerFromRoom_Success(t *testing.T) {
+func TestRoomServiceKickPlayerFromRoomSuccess(t *testing.T) {
 	rs, mockRepo := newTestRoomService(t)
 	room := &Room{ID: "room1", Host: Player{ID: "1"}, Team1: []Player{{ID: "1"}, {ID: "2"}}, Team2: []Player{}, Players: 2}
 	mockRepo.On("GetRoom", "room1").Return(room, nil)
@@ -106,7 +106,7 @@ func TestRoomService_KickPlayerFromRoom_Success(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestRoomService_KickPlayerFromRoom_NotHost(t *testing.T) {
+func TestRoomServiceKickPlayerFromRoomNotHost(t *testing.T) {
 	rs, mockRepo := newTestRoomService(t)
 	room := &Room{ID: "room1", Host: Player{ID: "1"}, Team1: []Player{{ID: "1"}, {ID: "2"}}, Team2: []Player{}, Players: 2}
 	mockRepo.On("GetRoom", "room1").Return(room, nil)

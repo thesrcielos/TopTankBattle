@@ -376,11 +376,12 @@ func (s *GameServiceImpl) getPlayerIdsFromRoomAndTeam(roomId string, playerId st
 
 func (s *GameServiceImpl) getPlayerIdsFromRoom(roomId string, playerId string) []string {
 	room, err := s.roomRepo.GetRoom(roomId)
+	fmt.Println(room)
 	if err != nil {
 		return nil
 	}
 
-	playerIds := make([]string, 0, len(room.Team1)+len(room.Team2))
+	playerIds := []string{}
 	for _, player := range room.Team1 {
 		if player.ID == playerId {
 			continue

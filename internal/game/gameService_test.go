@@ -227,3 +227,99 @@ func TestStartGame_Success(t *testing.T) {
 	mockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
 	mockGameRepo.AssertCalled(t, "TryToBecomeLeader", roomID)
 }
+
+func TestHandleHitPlayer_PlayerHitAndKilled(t *testing.T) {
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
+	gameState := &state.GameState{
+		RoomId:  "room1",
+		Players: map[string]*state.PlayerState{"p1": {ID: "p1", Health: 20}},
+		Bullets: map[string]*state.Bullet{"b1": {}},
+	}
+	users := []string{"p2"}
+	mockGameRepo.On("PublishToRoom", mock.Anything).Return()
+	// Should trigger PLAYER_KILLED and call RevivePlayer (which is async)
+	gameService.HandleHitPlayer(gameState.Players["p1"], gameState, 20, "b1", users)
+	assert.Equal(t, 0, gameState.Players["p1"].Health)
+	_, exists := gameState.Bullets["b1"]
+	assert.False(t, exists)
+	mockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
+}
+
+func TestHandleHitPlayer_PlayerHitButNotKilled(t *testing.T) {
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
+	gameState := &state.GameState{
+		RoomId:  "room1",
+		Players: map[string]*state.PlayerState{"p1": {ID: "p1", Health: 100}},
+		Bullets: map[string]*state.Bullet{"b1": {}},
+	}
+	users := []string{"p2"}
+	mockGameRepo.On("PublishToRoom", mock.Anything).Return()
+	gameService.HandleHitPlayer(gameState.Players["p1"], gameState, 20, "b1", users)
+	assert.Equal(t, 80, gameState.Players["p1"].Health)
+	_, exists := gameState.Bullets["b1"]
+	assert.False(t, exists)
+	mockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
+}
+
+func TestHandleHitFortress_Destroyed(t *testing.T) {
+	fortress := &state.Fortress{ID: "f1", Health: 20, Team1: true}
+	gameState := &state.GameState{RoomId: "room1", Bullets: map[string]*state.Bullet{"b1": {}}, Fortresses: []*state.Fortress{fortress}}
+	users := []string{"p1", "p2"}
+	mockGameRepo.On("PublishToRoom", mock.Anything).Return()
+	mockGameRepo.On("SaveGameState", mock.Anything).Return()
+	mockRoomRepo.On("GetRoom", "room1").Return(&Room{ID: "room1", Host: Player{ID: "host"}}, nil)
+	mockRoomRepo.On("SaveRoom", mock.Anything).Return(nil)
+	mockRoomRepo.On("PublishToRoom", mock.Anything).Return()
+	mockUserRepo.On("GetUserUsername", mock.Anything).Return("user", nil)
+	userService = user.NewUserService(mockUserRepo)
+	roomService = NewRoomService(mockRoomRepo)
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
+	result := gameService.HandleHitFortress(fortress, gameState, 20, "b1", users)
+	assert.True(t, result)
+	assert.Equal(t, 0, fortress.Health)
+	mockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
+}
+
+func TestHandleHitFortress_NotDestroyed(t *testing.T) {
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
+	fortress := &state.Fortress{ID: "f1", Health: 100, Team1: true}
+	gameState := &state.GameState{RoomId: "room1", Bullets: map[string]*state.Bullet{"b1": {}}, Fortresses: []*state.Fortress{fortress}}
+	users := []string{"p1", "p2"}
+	mockGameRepo.On("PublishToRoom", mock.Anything).Return()
+	result := gameService.HandleHitFortress(fortress, gameState, 20, "b1", users)
+	assert.False(t, result)
+	assert.Equal(t, 80, fortress.Health)
+	_, exists := gameState.Bullets["b1"]
+	assert.False(t, exists)
+	mockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
+}
+
+func TestGetPlayerIdsFromRoom(t *testing.T) {
+	localMockRoomRepo := new(MockRoomRepository)
+	localGameService := NewGameService(mockGameRepo, localMockRoomRepo, roomService, userService)
+	room := &Room{
+		ID:    "room1",
+		Team1: []Player{{ID: "p1"}, {ID: "p2"}},
+		Team2: []Player{{ID: "p3"}},
+	}
+	localMockRoomRepo.On("GetRoom", "room1").Return(room, nil)
+	ids := localGameService.getPlayerIdsFromRoom("room1", "p1")
+	assert.ElementsMatch(t, []string{"p2", "p3"}, ids)
+}
+
+func TestGetPlayerIdsFromRoomAndTeam(t *testing.T) {
+	localMockRoomRepo := new(MockRoomRepository)
+	localGameService := NewGameService(mockGameRepo, localMockRoomRepo, roomService, userService)
+	room := &Room{
+		ID:    "room1",
+		Team1: []Player{{ID: "p1"}, {ID: "p2"}},
+		Team2: []Player{{ID: "p3"}},
+	}
+	localMockRoomRepo.On("GetRoom", "room1").Return(room, nil)
+	ids, team1 := localGameService.getPlayerIdsFromRoomAndTeam("room1", "p1")
+	assert.ElementsMatch(t, []string{"p2", "p3"}, ids)
+	assert.True(t, team1)
+	ids, team1 = localGameService.getPlayerIdsFromRoomAndTeam("room1", "p3")
+	assert.ElementsMatch(t, []string{"p1", "p2"}, ids)
+	assert.False(t, team1)
+}
