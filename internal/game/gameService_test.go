@@ -475,3 +475,55 @@ func TestValidateRoomErrors(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "teams must have at most 1 player more than the other team")
 }
+
+func TestSendGameChangeMessage_EmptyRoomId(t *testing.T) {
+	localMockGameRepo := new(MockGameStateRepository)
+	localMockRoomRepo := new(MockRoomRepository)
+	localRoomService := NewRoomService(localMockRoomRepo)
+	localUserService := user.NewUserService(mockUserRepo)
+	gameService := NewGameService(localMockGameRepo, localMockRoomRepo, localRoomService, localUserService)
+
+	gameService.SendGameChangeMessage("", GameMessage{Type: "TEST", Payload: nil})
+	localMockGameRepo.AssertNotCalled(t, "PublishToRoom", mock.Anything)
+}
+
+func TestSendGameChangeMessage_InvalidJSON(t *testing.T) {
+	localMockGameRepo := new(MockGameStateRepository)
+	localMockRoomRepo := new(MockRoomRepository)
+	localRoomService := NewRoomService(localMockRoomRepo)
+	localUserService := user.NewUserService(mockUserRepo)
+	gameService := NewGameService(localMockGameRepo, localMockRoomRepo, localRoomService, localUserService)
+
+	msg := GameMessage{Type: "TEST", Payload: make(chan int)}
+
+	gameService.SendGameChangeMessage("room1", msg)
+	localMockGameRepo.AssertNotCalled(t, "PublishToRoom", mock.Anything)
+}
+
+func TestStartGame_FailsOnGetRoom(t *testing.T) {
+	localMockGameRepo := new(MockGameStateRepository)
+	localMockRoomRepo := new(MockRoomRepository)
+	localRoomService := NewRoomService(localMockRoomRepo)
+	localUserService := user.NewUserService(mockUserRepo)
+	gameService := NewGameService(localMockGameRepo, localMockRoomRepo, localRoomService, localUserService)
+
+	localMockRoomRepo.On("GetRoom", "roomX").Return(nil, assert.AnError)
+	err := gameService.StartGame("host", "roomX", true)
+	assert.Error(t, err)
+	assert.Equal(t, assert.AnError, err)
+}
+
+func TestStartGame_FailsOnValidateRoom(t *testing.T) {
+	localMockGameRepo := new(MockGameStateRepository)
+	localMockRoomRepo := new(MockRoomRepository)
+	localRoomService := NewRoomService(localMockRoomRepo)
+	localUserService := user.NewUserService(mockUserRepo)
+	gameService := NewGameService(localMockGameRepo, localMockRoomRepo, localRoomService, localUserService)
+
+	room := &Room{ID: "roomY", Host: Player{ID: "host"}, Status: "LOBBY", Team1: []Player{}, Team2: []Player{}}
+	localMockRoomRepo.On("GetRoom", "roomY").Return(room, nil)
+
+	err := gameService.StartGame("host", "roomY", true)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not enough players")
+}
