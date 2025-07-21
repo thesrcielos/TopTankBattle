@@ -27,7 +27,7 @@ func getEnv(key, fallback string) string {
 
 func NewGameStateRepository(leaderElector LeaderElector, db *redis.Client) *RedisGameStateRepository {
 	return &RedisGameStateRepository{
-		leaderElector: leaderElector,
+		LeaderElector: leaderElector,
 		db:            db,
 	}
 }
@@ -45,7 +45,7 @@ type GameStateRepository interface {
 }
 
 type RedisGameStateRepository struct {
-	leaderElector LeaderElector
+	LeaderElector LeaderElector
 	db            *redis.Client
 }
 
@@ -106,7 +106,7 @@ func (r *RedisGameStateRepository) SendReceivedMessage(messageEncoded string) {
 			return
 		}
 		if info.Instance != instanceID {
-			go r.leaderElector.AttemptLeadership(info.RoomId)
+			go r.LeaderElector.AttemptLeadership(info.RoomId)
 		}
 		return
 	}

@@ -78,17 +78,17 @@ func main() {
 }
 
 func inyectDependencies() {
-	var gameService *game.GameService
-	redisRepository := game.NewGameStateRepository(gameService, db.Rdb)
+	var gameServiceImp *game.GameServiceImpl
+	redisRepository := game.NewGameStateRepository(gameServiceImp, db.Rdb)
 	userRepository := user.NewUserRepository(db.DB)
 	roomRepository := game.NewRedisRoomRepository(userRepository, db.Rdb)
 	roomService := game.NewRoomService(roomRepository)
 	userService := user.NewUserService(userRepository)
-	gameService = game.NewGameService(redisRepository, roomRepository, roomService, userService)
+	gameServiceImp = game.NewGameService(redisRepository, roomRepository, roomService, userService)
 	v1.RoomService = roomService
 	v1.UserService = userService
 	websocket.RoomService = roomService
-	websocket.GameService = gameService
+	websocket.GameService = gameServiceImp
 
 	startRedisSubscriber(redisRepository)
 }

@@ -116,7 +116,9 @@ func UnregisterPlayer(id string) {
 	if player == nil {
 		return
 	}
-	player.Conn.Close()
+	if player.Conn != nil {
+		player.Conn.Close()
+	}
 
 	delete(players, id)
 }

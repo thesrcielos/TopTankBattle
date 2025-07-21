@@ -26,7 +26,7 @@ var (
 	}
 )
 
-var GameService *game.GameService
+var GameService game.GameService
 
 func WebSocketHandler(c echo.Context) error {
 	tokenString := c.QueryParam("token")

@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/thesrcielos/TopTankBattle/internal/game/maps"
 	"github.com/thesrcielos/TopTankBattle/internal/game/state"
@@ -11,9 +13,9 @@ import (
 )
 
 var (
-	mockRoomRepo RoomRepository
-	mockGameRepo GameStateRepository
-	mockUserRepo user.UserRepository
+	mockRoomRepo *MockRoomRepository
+	mockGameRepo *MockGameStateRepository
+	mockUserRepo *user.MockUserRepository
 
 	roomService *RoomService
 	userService *user.UserService
@@ -21,9 +23,9 @@ var (
 
 func TestMain(m *testing.M) {
 	// Mock Repositories
-	mockRoomRepo = new(RoomRepositoryMock)
-	mockGameRepo = new(GameStateRepositoryMock)
-	mockUserRepo = new(MockUserRepository)
+	mockRoomRepo = new(MockRoomRepository)
+	mockGameRepo = new(MockGameStateRepository)
+	mockUserRepo = new(user.MockUserRepository)
 
 	roomService = NewRoomService(mockRoomRepo)
 	userService = user.NewUserService(mockUserRepo)
@@ -188,4 +190,40 @@ func TestCheckBulletCollisionHitsEnemyFortress(t *testing.T) {
 	if destroyed {
 		t.Errorf("Expected bullet not destroyed")
 	}
+}
+
+func TestStartGame_Success(t *testing.T) {
+	gameService := NewGameService(mockGameRepo, mockRoomRepo, roomService, userService)
+	// Datos simulados
+	playerID := "player1"
+	roomID := "room123"
+
+	room := &Room{
+		ID:     roomID,
+		Status: "LOBBY",
+		Host:   Player{ID: playerID},
+		Team1:  []Player{{ID: playerID}},
+		Team2:  []Player{{ID: "player2"}},
+	}
+
+	// Mock de GetRoom
+	mockRoomRepo.On("GetRoom", roomID).Return(room, nil)
+	mockRoomRepo.On("SaveRoom", mock.Anything).Return(nil)
+	mockGameRepo.On("SaveGameState", mock.Anything).Return()
+	mockGameRepo.On("PublishToRoom", mock.Anything).Return()
+	mockGameRepo.On("TryToBecomeLeader", roomID).Return(true)
+
+	// Simulación básica del estado global del jugador
+	state.RegisterPlayer(playerID, roomID, nil)
+	state.RegisterPlayer("player2", roomID, nil)
+
+	err := gameService.StartGame(playerID, roomID, true)
+
+	// Verificar
+	assert.NoError(t, err)
+	mockRoomRepo.AssertCalled(t, "GetRoom", roomID)
+	mockRoomRepo.AssertCalled(t, "SaveRoom", mock.Anything)
+	mockGameRepo.AssertCalled(t, "SaveGameState", mock.Anything)
+	mockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
+	mockGameRepo.AssertCalled(t, "TryToBecomeLeader", roomID)
 }

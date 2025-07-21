@@ -8,13 +8,13 @@ import (
 	"github.com/thesrcielos/TopTankBattle/websocket/message"
 )
 
-var handlers = map[string]func(playerId string, payload message.Message, game *game.GameService){
+var handlers = map[string]func(playerId string, payload message.Message, game game.GameService){
 	"MOVE":       actions.HandleMove,
 	"SHOOT":      actions.HandleShoot,
 	"GAME_START": actions.HandleGameStart,
 }
 
-func RouteMessage(playerId string, msg message.Message, GameService *game.GameService) {
+func RouteMessage(playerId string, msg message.Message, GameService game.GameService) {
 	if handler, ok := handlers[msg.Type]; ok {
 		handler(playerId, msg, GameService)
 	} else {

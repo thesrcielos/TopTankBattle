@@ -9,7 +9,7 @@ import (
 	"github.com/thesrcielos/TopTankBattle/websocket/message"
 )
 
-func HandleMove(playerId string, msg message.Message, gameService *game.GameService) {
+func HandleMove(playerId string, msg message.Message, gameService game.GameService) {
 	var movePayload message.GameMovePayload
 	if err := json.Unmarshal(msg.Payload, &movePayload); err != nil {
 		log.Println("Error decoding", err)
