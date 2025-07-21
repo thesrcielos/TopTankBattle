@@ -12,9 +12,7 @@ type JwtCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-var jwtKey = []byte(os.Getenv("JWT_SECRET"))
-
-func GenerateJWT(id uint) (string, error) {
+var GenerateJWT = func(id uint) (string, error) {
 	claims := JwtCustomClaims{
 		Id: id,
 		RegisteredClaims: jwt.RegisteredClaims{
