@@ -323,3 +323,93 @@ func TestGetPlayerIdsFromRoomAndTeam(t *testing.T) {
 	assert.ElementsMatch(t, []string{"p1", "p2"}, ids)
 	assert.False(t, team1)
 }
+
+func TestMovePlayer_SendsMessage_WhenPlayerExistsAndAlive(t *testing.T) {
+	localMockGameRepo := new(MockGameStateRepository)
+	localMockRoomRepo := new(MockRoomRepository)
+	localRoomService := NewRoomService(localMockRoomRepo)
+	localUserService := user.NewUserService(mockUserRepo)
+	gameService := NewGameService(localMockGameRepo, localMockRoomRepo, localRoomService, localUserService)
+
+	playerId := "p1"
+	roomId := "room1"
+	pos := state.Position{X: 10, Y: 20, Angle: 0}
+	state.RegisterPlayer(playerId, roomId, nil)
+	playerConn := state.GetPlayer(playerId)
+	playerConn.GameState = nil // Simula que no está en partida
+
+	localMockRoomRepo.On("GetRoom", roomId).Return(&Room{
+		ID:    roomId,
+		Team1: []Player{{ID: playerId}, {ID: "p2"}},
+		Team2: []Player{{ID: "p3"}},
+	}, nil)
+	localMockGameRepo.On("PublishToRoom", mock.Anything).Return()
+
+	gameService.MovePlayer(playerId, pos)
+	localMockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
+}
+
+func TestMovePlayer_NoSend_WhenPlayerDoesNotExist(t *testing.T) {
+	localMockGameRepo := new(MockGameStateRepository)
+	localMockRoomRepo := new(MockRoomRepository)
+	localRoomService := NewRoomService(localMockRoomRepo)
+	localUserService := user.NewUserService(mockUserRepo)
+	gameService := NewGameService(localMockGameRepo, localMockRoomRepo, localRoomService, localUserService)
+
+	// No se registra el jugador
+	pos := state.Position{X: 10, Y: 20, Angle: 0}
+	// No debe hacer panic ni enviar mensaje
+	gameService.MovePlayer("noexiste", pos)
+	localMockGameRepo.AssertNotCalled(t, "PublishToRoom", mock.Anything)
+}
+
+func TestShootBullet_SendsMessage_WithoutGameState(t *testing.T) {
+	localMockGameRepo := new(MockGameStateRepository)
+	localMockRoomRepo := new(MockRoomRepository)
+	localRoomService := NewRoomService(localMockRoomRepo)
+	localUserService := user.NewUserService(mockUserRepo)
+	gameService := NewGameService(localMockGameRepo, localMockRoomRepo, localRoomService, localUserService)
+
+	playerId := "p1"
+	roomId := "room1"
+	state.RegisterPlayer(playerId, roomId, nil)
+	playerConn := state.GetPlayer(playerId)
+	playerConn.GameState = nil // Simula que no está en partida
+
+	localMockRoomRepo.On("GetRoom", roomId).Return(&Room{
+		ID:    roomId,
+		Team1: []Player{{ID: playerId}, {ID: "p2"}},
+		Team2: []Player{{ID: "p3"}},
+	}, nil)
+	localMockGameRepo.On("PublishToRoom", mock.Anything).Return()
+
+	bullet := &state.Bullet{ID: "b1", OwnerId: playerId, Position: state.Position{X: 1, Y: 2, Angle: 0}, Speed: 10}
+	gameService.ShootBullet(bullet)
+	localMockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
+}
+
+func TestShootBullet_SendsMessage_WithGameState(t *testing.T) {
+	localMockGameRepo := new(MockGameStateRepository)
+	localMockRoomRepo := new(MockRoomRepository)
+	localRoomService := NewRoomService(localMockRoomRepo)
+	localUserService := user.NewUserService(mockUserRepo)
+	gameService := NewGameService(localMockGameRepo, localMockRoomRepo, localRoomService, localUserService)
+
+	playerId := "p1"
+	roomId := "room1"
+	state.RegisterPlayer(playerId, roomId, nil)
+	playerConn := state.GetPlayer(playerId)
+	// Simula que está en partida
+	gs := &state.GameState{
+		RoomId:  roomId,
+		Players: map[string]*state.PlayerState{playerId: {ID: playerId, Health: 100, Team1: true}},
+		Bullets: map[string]*state.Bullet{},
+	}
+	playerConn.GameState = gs
+
+	localMockGameRepo.On("PublishToRoom", mock.Anything).Return()
+
+	bullet := &state.Bullet{ID: "b1", OwnerId: playerId, Position: state.Position{X: 1, Y: 2, Angle: 0}, Speed: 10}
+	gameService.ShootBullet(bullet)
+	localMockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
+}

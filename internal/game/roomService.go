@@ -109,53 +109,6 @@ func (r *RoomService) LeaveRoom(playerId string) error {
 	return nil
 }
 
-func (r *RoomService) KickPlayerFromRoom(playerId string, roomId string, playerToKick string) (*Room, error) {
-	room, err := r.repo.GetRoom(roomId)
-	if err != nil {
-		return nil, err
-	}
-
-	playerRoom, errPR := r.repo.GetPlayerRoom(playerToKick)
-	if errPR != nil {
-		return nil, errPR
-	}
-
-	if playerRoom == nil || playerRoom.(string) != roomId {
-		return nil, apperrors.NewAppError(404, "Player not found in room", nil)
-	}
-
-	if room.Host.ID != playerId {
-		return nil, apperrors.NewAppError(403, "Only the host can kick players", nil)
-	}
-
-	if playerToKick == room.Host.ID {
-		return nil, apperrors.NewAppError(403, "Host cannot be kicked", nil)
-	}
-
-	playerRequest := &PlayerRequest{
-		Player: playerToKick,
-		Room:   roomId,
-	}
-
-	room, err = r.repo.RemovePlayer(playerRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	errDb := r.repo.DeletePlayerRoom(playerToKick)
-	if errDb != nil {
-		return nil, errDb
-	}
-
-	if err := r.notifyPlayerKick(room, playerToKick); err != nil {
-		return nil, err
-	}
-
-	state.UnregisterPlayer(playerToKick)
-
-	return room, nil
-}
-
 func (r *RoomService) notifyPlayerKick(room *Room, kickedPlayerId string) error {
 	message := GameMessage{
 		Type: "ROOM_KICK",
@@ -257,35 +210,6 @@ func (r *RoomService) changeOwnerIfNeeded(playerID string, room *Room) error {
 	}
 	room.Host = newHost
 	return nil
-}
-
-func (r *RoomService) DeleteRoom(playerId string, roomId string) (*[]Player, error) {
-	room, err := r.repo.GetRoom(roomId)
-	if err != nil {
-		return nil, err
-	}
-
-	if room.Host.ID != playerId {
-		return nil, apperrors.NewAppError(403, "Only the host can delete the room", nil)
-	}
-
-	errDb := r.repo.DeleteRoom(roomId)
-	if errDb != nil {
-		return nil, errDb
-	}
-
-	players := []Player{}
-	for _, player := range room.Team1 {
-		players = append(players, player)
-		r.repo.DeletePlayerRoom(player.ID)
-	}
-
-	for _, player := range room.Team2 {
-		players = append(players, player)
-		r.repo.DeletePlayerRoom(player.ID)
-	}
-
-	return &players, nil
 }
 
 func (r *RoomRequest) Validate() error {
