@@ -89,3 +89,55 @@ func TestRoomServiceLeaveRoomNotInRoom(t *testing.T) {
 	assert.Contains(t, err.Error(), "Player is not in a room")
 	mockRepo.AssertExpectations(t)
 }
+
+func TestRoomServiceChangeOwnerIfNeededChangesOwner(t *testing.T) {
+	rs, mockRepo := newTestRoomService(t)
+	room := &Room{
+		ID:      "room1",
+		Host:    Player{ID: "oldhost"},
+		Players: 2,
+		Team1:   []Player{{ID: "newhost"}},
+		Team2:   []Player{},
+	}
+	mockRepo.On("ChangeRoomOwner", "room1", room.Team1[0]).Return(room, nil)
+	err := rs.changeOwnerIfNeeded("oldhost", room)
+	assert.NoError(t, err)
+	assert.Equal(t, "newhost", room.Host.ID)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestRoomServiceChangeOwnerIfNeededNoChangeIfNotHostOrNoPlayers(t *testing.T) {
+	rs, mockRepo := newTestRoomService(t)
+	room := &Room{
+		ID:      "room1",
+		Host:    Player{ID: "host"},
+		Players: 0,
+		Team1:   []Player{},
+		Team2:   []Player{},
+	}
+	// No se debe llamar a ChangeRoomOwner
+	err := rs.changeOwnerIfNeeded("notTheHost", room)
+	assert.NoError(t, err)
+	err = rs.changeOwnerIfNeeded("host", room)
+	assert.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestRoomServiceGetRoomsSuccess(t *testing.T) {
+	rs, mockRepo := newTestRoomService(t)
+	rooms := []Room{{ID: "room1"}, {ID: "room2"}}
+	mockRepo.On("GetRooms", 1, 10).Return(&rooms, nil)
+	result, err := rs.GetRooms(&RoomPageRequest{Page: 1, PageSize: 10})
+	assert.NoError(t, err)
+	assert.Equal(t, &rooms, result)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestRoomServiceGetRoomsError(t *testing.T) {
+	rs, mockRepo := newTestRoomService(t)
+	mockRepo.On("GetRooms", 1, 10).Return(nil, assert.AnError)
+	result, err := rs.GetRooms(&RoomPageRequest{Page: 1, PageSize: 10})
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	mockRepo.AssertExpectations(t)
+}

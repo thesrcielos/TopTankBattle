@@ -109,19 +109,6 @@ func (r *RoomService) LeaveRoom(playerId string) error {
 	return nil
 }
 
-func (r *RoomService) notifyPlayerKick(room *Room, kickedPlayerId string) error {
-	message := GameMessage{
-		Type: "ROOM_KICK",
-		Payload: KickPlayerMessage{
-			Room:   room.ID,
-			Kicked: kickedPlayerId,
-		},
-	}
-	room.Team1 = append(room.Team1, Player{ID: kickedPlayerId})
-	r.sendRoomChangeMessage(room, message)
-	return nil
-}
-
 func (r *RoomService) notifyPlayerJoin(room *Room, playerId string) error {
 	player, err := r.getPlayerFromRoom(playerId, room)
 	if err != nil {

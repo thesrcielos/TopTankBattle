@@ -324,7 +324,7 @@ func TestGetPlayerIdsFromRoomAndTeam(t *testing.T) {
 	assert.False(t, team1)
 }
 
-func TestMovePlayer_SendsMessage_WhenPlayerExistsAndAlive(t *testing.T) {
+func TestMovePlayerSendsMessageWhenPlayerExistsAndAlive(t *testing.T) {
 	localMockGameRepo := new(MockGameStateRepository)
 	localMockRoomRepo := new(MockRoomRepository)
 	localRoomService := NewRoomService(localMockRoomRepo)
@@ -349,7 +349,7 @@ func TestMovePlayer_SendsMessage_WhenPlayerExistsAndAlive(t *testing.T) {
 	localMockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
 }
 
-func TestMovePlayer_NoSend_WhenPlayerDoesNotExist(t *testing.T) {
+func TestMovePlayerNoSendWhenPlayerDoesNotExist(t *testing.T) {
 	localMockGameRepo := new(MockGameStateRepository)
 	localMockRoomRepo := new(MockRoomRepository)
 	localRoomService := NewRoomService(localMockRoomRepo)
@@ -363,7 +363,7 @@ func TestMovePlayer_NoSend_WhenPlayerDoesNotExist(t *testing.T) {
 	localMockGameRepo.AssertNotCalled(t, "PublishToRoom", mock.Anything)
 }
 
-func TestShootBullet_SendsMessage_WithoutGameState(t *testing.T) {
+func TestShootBulletSendsMessageWithoutGameState(t *testing.T) {
 	localMockGameRepo := new(MockGameStateRepository)
 	localMockRoomRepo := new(MockRoomRepository)
 	localRoomService := NewRoomService(localMockRoomRepo)
@@ -388,7 +388,7 @@ func TestShootBullet_SendsMessage_WithoutGameState(t *testing.T) {
 	localMockGameRepo.AssertCalled(t, "PublishToRoom", mock.Anything)
 }
 
-func TestShootBullet_SendsMessage_WithGameState(t *testing.T) {
+func TestShootBulletSendsMessageWithGameState(t *testing.T) {
 	localMockGameRepo := new(MockGameStateRepository)
 	localMockRoomRepo := new(MockRoomRepository)
 	localRoomService := NewRoomService(localMockRoomRepo)
