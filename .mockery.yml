@@ -1,6 +1,6 @@
 all: true
-dir: ./internal/user
-filename: mocks_test.go
+dir: ./internal/game
+filename: mocks.go
 force-file-write: true
 formatter: goimports
 include-auto-generated: false
@@ -12,6 +12,6 @@ require-template-schema-exists: true
 template: testify
 template-schema: '{{.Template}}.schema.json'
 packages:
-  github.com/thesrcielos/TopTankBattle/internal/user:
+  github.com/thesrcielos/TopTankBattle/internal/game:
     config:
       all: true

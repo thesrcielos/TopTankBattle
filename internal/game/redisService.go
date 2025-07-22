@@ -42,6 +42,7 @@ type GameStateRepository interface {
 	RenewLeadership(roomID string, expiration time.Duration) (bool, error)
 	UpdateGamePlayerState(playerId string, position state.Position)
 	UpdateGameBullets(bullet state.Bullet)
+	SetLeaderElector(elector LeaderElector)
 }
 
 type RedisGameStateRepository struct {
@@ -49,6 +50,9 @@ type RedisGameStateRepository struct {
 	db            *redis.Client
 }
 
+func (r *RedisGameStateRepository) SetLeaderElector(elector LeaderElector) {
+	r.LeaderElector = elector
+}
 func (r *RedisGameStateRepository) PublishToRoom(payload string) {
 	err := r.db.Publish(ctx, "messages", payload).Err()
 	if err != nil {

@@ -1639,6 +1639,46 @@ func (_c *MockGameStateRepository_SendReceivedMessage_Call) RunAndReturn(run fun
 	return _c
 }
 
+// SetLeaderElector provides a mock function for the type MockGameStateRepository
+func (_mock *MockGameStateRepository) SetLeaderElector(elector LeaderElector) {
+	_mock.Called(elector)
+	return
+}
+
+// MockGameStateRepository_SetLeaderElector_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetLeaderElector'
+type MockGameStateRepository_SetLeaderElector_Call struct {
+	*mock.Call
+}
+
+// SetLeaderElector is a helper method to define mock.On call
+//   - elector LeaderElector
+func (_e *MockGameStateRepository_Expecter) SetLeaderElector(elector interface{}) *MockGameStateRepository_SetLeaderElector_Call {
+	return &MockGameStateRepository_SetLeaderElector_Call{Call: _e.mock.On("SetLeaderElector", elector)}
+}
+
+func (_c *MockGameStateRepository_SetLeaderElector_Call) Run(run func(elector LeaderElector)) *MockGameStateRepository_SetLeaderElector_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 LeaderElector
+		if args[0] != nil {
+			arg0 = args[0].(LeaderElector)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockGameStateRepository_SetLeaderElector_Call) Return() *MockGameStateRepository_SetLeaderElector_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockGameStateRepository_SetLeaderElector_Call) RunAndReturn(run func(elector LeaderElector)) *MockGameStateRepository_SetLeaderElector_Call {
+	_c.Run(run)
+	return _c
+}
+
 // SubscribeMessages provides a mock function for the type MockGameStateRepository
 func (_mock *MockGameStateRepository) SubscribeMessages() error {
 	ret := _mock.Called()
