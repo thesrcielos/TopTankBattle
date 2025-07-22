@@ -476,7 +476,7 @@ func TestValidateRoomErrors(t *testing.T) {
 	assert.Contains(t, err.Error(), "teams must have at most 1 player more than the other team")
 }
 
-func TestSendGameChangeMessage_EmptyRoomId(t *testing.T) {
+func TestSendGameChangeMessageEmptyRoomId(t *testing.T) {
 	localMockGameRepo := new(MockGameStateRepository)
 	localMockRoomRepo := new(MockRoomRepository)
 	localRoomService := NewRoomService(localMockRoomRepo)
@@ -487,7 +487,7 @@ func TestSendGameChangeMessage_EmptyRoomId(t *testing.T) {
 	localMockGameRepo.AssertNotCalled(t, "PublishToRoom", mock.Anything)
 }
 
-func TestSendGameChangeMessage_InvalidJSON(t *testing.T) {
+func TestSendGameChangeMessageInvalidJSON(t *testing.T) {
 	localMockGameRepo := new(MockGameStateRepository)
 	localMockRoomRepo := new(MockRoomRepository)
 	localRoomService := NewRoomService(localMockRoomRepo)
@@ -500,7 +500,7 @@ func TestSendGameChangeMessage_InvalidJSON(t *testing.T) {
 	localMockGameRepo.AssertNotCalled(t, "PublishToRoom", mock.Anything)
 }
 
-func TestStartGame_FailsOnGetRoom(t *testing.T) {
+func TestStartGameFailsOnGetRoom(t *testing.T) {
 	localMockGameRepo := new(MockGameStateRepository)
 	localMockRoomRepo := new(MockRoomRepository)
 	localRoomService := NewRoomService(localMockRoomRepo)
@@ -513,7 +513,7 @@ func TestStartGame_FailsOnGetRoom(t *testing.T) {
 	assert.Equal(t, assert.AnError, err)
 }
 
-func TestStartGame_FailsOnValidateRoom(t *testing.T) {
+func TestStartGameFailsOnValidateRoom(t *testing.T) {
 	localMockGameRepo := new(MockGameStateRepository)
 	localMockRoomRepo := new(MockRoomRepository)
 	localRoomService := NewRoomService(localMockRoomRepo)

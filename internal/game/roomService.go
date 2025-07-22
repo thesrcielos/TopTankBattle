@@ -17,6 +17,7 @@ func NewRoomService(repo RoomRepository) *RoomService {
 	return &RoomService{repo: repo}
 }
 
+// CreateRoom handles the logic to create a new room
 func (r *RoomService) CreateRoom(request *RoomRequest) (*Room, error) {
 	val, errDB := r.repo.GetPlayerRoom(strconv.Itoa(request.Player))
 	if errDB != nil {
@@ -42,6 +43,7 @@ func (r *RoomService) CreateRoom(request *RoomRequest) (*Room, error) {
 	return room, nil
 }
 
+// GetRooms gets paginated rooms
 func (r *RoomService) GetRooms(request *RoomPageRequest) (*[]Room, error) {
 	rooms, err := r.repo.GetRooms(request.Page, request.PageSize)
 	if err != nil {
@@ -51,6 +53,7 @@ func (r *RoomService) GetRooms(request *RoomPageRequest) (*[]Room, error) {
 	return rooms, nil
 }
 
+// JoinRoom handles the logic to join in a room
 func (r *RoomService) JoinRoom(playerRequest *PlayerRequest) (*Room, error) {
 	val, errDB := r.repo.GetPlayerRoom(playerRequest.Player)
 	if errDB != nil {
@@ -75,6 +78,7 @@ func (r *RoomService) JoinRoom(playerRequest *PlayerRequest) (*Room, error) {
 	return room, nil
 }
 
+// LeaveRoom disconnects the players from a room and notifies to the other players
 func (r *RoomService) LeaveRoom(playerId string) error {
 	val, errDB := r.repo.GetPlayerRoom(playerId)
 	if errDB != nil {
@@ -109,6 +113,7 @@ func (r *RoomService) LeaveRoom(playerId string) error {
 	return nil
 }
 
+// notifyPlayerJoin notifies when a player joins a room
 func (r *RoomService) notifyPlayerJoin(room *Room, playerId string) error {
 	player, err := r.getPlayerFromRoom(playerId, room)
 	if err != nil {
@@ -127,6 +132,7 @@ func (r *RoomService) notifyPlayerJoin(room *Room, playerId string) error {
 	return nil
 }
 
+// sendRoomChangeMessage notifies when there is a change in a room
 func (r *RoomService) sendRoomChangeMessage(room *Room, message GameMessage) {
 	players := make([]string, 0, len(room.Team1)+len(room.Team2))
 	for _, player := range room.Team1 {
@@ -144,6 +150,7 @@ func (r *RoomService) sendRoomChangeMessage(room *Room, message GameMessage) {
 	r.repo.PublishToRoom(string(msg))
 }
 
+// getPlayerFromRoom get the Player from a room
 func (r *RoomService) getPlayerFromRoom(playerId string, room *Room) (map[string]interface{}, error) {
 	for _, player := range room.Team1 {
 		if player.ID == playerId {
@@ -164,6 +171,7 @@ func (r *RoomService) getPlayerFromRoom(playerId string, room *Room) (map[string
 	return nil, apperrors.NewAppError(404, "Player not found in room", nil)
 }
 
+// notifyOrDeleteRoom deletes a room if there's no players left or notifies about a player leaving the room
 func (r *RoomService) notifyOrDeleteRoom(room *Room, playerId string) error {
 	if room.Players == 0 {
 		return r.repo.DeleteRoom(room.ID)
@@ -181,6 +189,7 @@ func (r *RoomService) notifyOrDeleteRoom(room *Room, playerId string) error {
 	return nil
 }
 
+// changeOwnerIfNeeded change the room owner if the host leaves the room
 func (r *RoomService) changeOwnerIfNeeded(playerID string, room *Room) error {
 	if room.Host.ID != playerID || room.Players == 0 {
 		return nil
@@ -199,6 +208,7 @@ func (r *RoomService) changeOwnerIfNeeded(playerID string, room *Room) error {
 	return nil
 }
 
+// Validate validates a room request
 func (r *RoomRequest) Validate() error {
 	validCapacities := map[int]bool{2: true, 4: true, 6: true}
 	if !validCapacities[r.Capacity] {

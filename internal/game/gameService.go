@@ -23,6 +23,7 @@ type LeaderElector interface {
 	AttemptLeadership(roomId string)
 }
 
+// GameService interface that defines the services that offers game
 type GameService interface {
 	StartGame(playerId string, roomId string, test bool) error
 	NotifyGameStart(game *state.GameState)
@@ -54,6 +55,7 @@ type GameServiceImpl struct {
 	repo        GameStateRepository
 }
 
+// NewGameService Constructor for Creating a GameServieImpl
 func NewGameService(repo GameStateRepository, roomRepo RoomRepository, roomService *RoomService, userService *user.UserService) *GameServiceImpl {
 	return &GameServiceImpl{repo: repo,
 		roomRepo:    roomRepo,
@@ -62,6 +64,7 @@ func NewGameService(repo GameStateRepository, roomRepo RoomRepository, roomServi
 	}
 }
 
+// StartGame Set up all the configurations neeeded to start a game
 func (s *GameServiceImpl) StartGame(playerId string, roomId string, test bool) error {
 	room, err := s.roomRepo.GetRoom(roomId)
 	if err != nil {
@@ -158,6 +161,7 @@ func (s *GameServiceImpl) StartGame(playerId string, roomId string, test bool) e
 	return nil
 }
 
+// NotifyGameStart sNotifies to players the starting game by redis pub sub
 func (s *GameServiceImpl) NotifyGameStart(game *state.GameState) {
 	message := GameMessage{
 		Type:    "GAME_START",
@@ -172,6 +176,7 @@ func (s *GameServiceImpl) NotifyGameStart(game *state.GameState) {
 	s.repo.PublishToRoom(string(msg))
 }
 
+// SetPlayersGameState sets gameState to the PlayerConnections
 func (s *GameServiceImpl) SetPlayersGameState(gameState *state.GameState) error {
 	if gameState == nil {
 		return apperrors.NewAppError(400, "Cannot start game: game state is nil", nil)
@@ -195,6 +200,7 @@ func (s *GameServiceImpl) SetPlayersGameState(gameState *state.GameState) error 
 	return nil
 }
 
+// AttemptLeadership tries to be the leader of the game if an instance fails
 func (s *GameServiceImpl) AttemptLeadership(roomId string) {
 	ticker := time.NewTicker(1000 * time.Millisecond)
 	defer ticker.Stop()
@@ -211,6 +217,7 @@ func (s *GameServiceImpl) AttemptLeadership(roomId string) {
 	}
 }
 
+// ValidateRoom validates rooms propertires before starting game
 func (s *GameServiceImpl) ValidateRoom(room *Room, playerId string) error {
 	if room == nil {
 		return apperrors.NewAppError(400, "Cannot start game: room does not exist", nil)
@@ -239,6 +246,7 @@ func (s *GameServiceImpl) ValidateRoom(room *Room, playerId string) error {
 	return nil
 }
 
+// MovePlayer method that receives and sets the new player position
 func (s *GameServiceImpl) MovePlayer(playerId string, newPosition state.Position) {
 	player := state.GetPlayer(playerId)
 	if player == nil {
@@ -281,6 +289,7 @@ func (s *GameServiceImpl) MovePlayer(playerId string, newPosition state.Position
 	s.SendGameChangeMessage(player.GameState.RoomId, message)
 }
 
+// SendGameChangeMessage send the message when a game property change
 func (s *GameServiceImpl) SendGameChangeMessage(roomId string, msg GameMessage) {
 	if roomId == "" {
 		log.Println("Game state is nil")
@@ -349,6 +358,7 @@ func (s *GameServiceImpl) ShootBullet(bullet *state.Bullet) {
 	s.SendGameChangeMessage(game.RoomId, msg)
 }
 
+// getPlayerIdsFromRoomAndTeam gets the players ids from the room and get the team of the player
 func (s *GameServiceImpl) getPlayerIdsFromRoomAndTeam(roomId string, playerId string) ([]string, bool) {
 	room, err := s.roomRepo.GetRoom(roomId)
 	if err != nil {
@@ -374,6 +384,7 @@ func (s *GameServiceImpl) getPlayerIdsFromRoomAndTeam(roomId string, playerId st
 	return playerIds, team1
 }
 
+// getPlayerIdsFromRoom gets the ids from the players of a room
 func (s *GameServiceImpl) getPlayerIdsFromRoom(roomId string, playerId string) []string {
 	room, err := s.roomRepo.GetRoom(roomId)
 	fmt.Println(room)
@@ -398,6 +409,7 @@ func (s *GameServiceImpl) getPlayerIdsFromRoom(roomId string, playerId string) [
 	return playerIds
 }
 
+// RunGameLoop runs the game bullets and check collisions
 func (s *GameServiceImpl) RunGameLoop(state *state.GameState, test bool) {
 	if test {
 		return
@@ -453,6 +465,7 @@ func (s *GameServiceImpl) RunGameLoop(state *state.GameState, test bool) {
 	}
 }
 
+// HandleHitFortress handles collision with a hit fortress
 func (s *GameServiceImpl) HandleHitFortress(hitFortress *state.Fortress, state *state.GameState, bulletDamage int, bulletId string, users []string) bool {
 	hitFortress.Health -= bulletDamage
 	if hitFortress.Health <= 0 {
@@ -479,6 +492,7 @@ func (s *GameServiceImpl) HandleHitFortress(hitFortress *state.Fortress, state *
 	}
 }
 
+// HandleHitPlaye rhandles collision with a hit player
 func (s *GameServiceImpl) HandleHitPlayer(hitPlayer *state.PlayerState, state *state.GameState, bulletDamage int, bulletId string, users []string) {
 	hitPlayer.Health -= bulletDamage
 	delete(state.Bullets, bulletId)
@@ -503,6 +517,7 @@ func (s *GameServiceImpl) HandleHitPlayer(hitPlayer *state.PlayerState, state *s
 	}
 }
 
+// CheckBulletCollision checks if a bullet collides with something in the game
 func (s *GameServiceImpl) CheckBulletCollision(bullet *state.Bullet, players map[string]*state.PlayerState, fortresses []*state.Fortress) (*state.PlayerState, *state.Fortress, bool) {
 	const bulletWidth = 12.0
 	const halfWidth = bulletWidth / 2.0
@@ -565,6 +580,7 @@ func (s *GameServiceImpl) CheckBulletCollision(bullet *state.Bullet, players map
 	return nil, nil, false
 }
 
+// checkFortressCollision check if the bullets collides with the fortress
 func (s *GameServiceImpl) checkFortressCollision(checkPoints []struct{ x, y float64 }, fortress *state.Fortress, team1 bool) (*state.Fortress, bool) {
 	hasCollision := false
 	for _, point := range checkPoints {
@@ -586,6 +602,7 @@ func (s *GameServiceImpl) checkFortressCollision(checkPoints []struct{ x, y floa
 	return fortress, false
 }
 
+// checkPlayerCollision check if the bullets collides with a player
 func (s *GameServiceImpl) checkPlayerCollision(checkPoints []struct{ x, y float64 }, player *state.PlayerState, team1 bool) (*state.PlayerState, bool) {
 	hasCollision := false
 	for _, point := range checkPoints {
@@ -607,6 +624,7 @@ func (s *GameServiceImpl) checkPlayerCollision(checkPoints []struct{ x, y float6
 	return player, false
 }
 
+// checkObstacleCollision check if the bullets collides with an obstacle
 func (s *GameServiceImpl) checkObstacleCollision(point struct{ x, y float64 }, obstacles [][]bool) bool {
 	col := int(point.x) / tileSize
 	row := int(point.y) / tileSize
@@ -621,6 +639,7 @@ func (s *GameServiceImpl) checkObstacleCollision(point struct{ x, y float64 }, o
 	return false
 }
 
+// rectCollision verifies if a point collides with an object
 func (s *GameServiceImpl) rectCollision(point state.Position, center state.Position, width, height float64) bool {
 	halfW := width / 2
 	halfH := height / 2
@@ -631,6 +650,7 @@ func (s *GameServiceImpl) rectCollision(point state.Position, center state.Posit
 		point.Y <= center.Y+halfH
 }
 
+// UpdateBullets updates bullets positions
 func (s *GameServiceImpl) UpdateBullets(bullets map[string]*state.Bullet, delta float64) {
 	for _, b := range bullets {
 		b.Position.X += math.Cos(b.Position.Angle) * b.Speed * delta
@@ -638,6 +658,7 @@ func (s *GameServiceImpl) UpdateBullets(bullets map[string]*state.Bullet, delta 
 	}
 }
 
+// RevivePlayer handles the logic to revive a dead player
 func (s *GameServiceImpl) RevivePlayer(playerId string, gameState *state.GameState) {
 	time.Sleep(6 * time.Second)
 	player := gameState.Players[playerId]
@@ -669,6 +690,7 @@ func (s *GameServiceImpl) RevivePlayer(playerId string, gameState *state.GameSta
 	})
 }
 
+// FinishGame handles the logic to end the game
 func (s *GameServiceImpl) FinishGame(game *state.GameState) {
 	team2Wins := true
 	if game.Fortresses[0].Team1 {
@@ -715,6 +737,7 @@ func (s *GameServiceImpl) FinishGame(game *state.GameState) {
 
 }
 
+// getGamePlayerIds gets the players from the gameState
 func (s *GameServiceImpl) getGamePlayerIds(game *state.GameState, playerId string) []string {
 	if game == nil || game.Players == nil {
 		return nil

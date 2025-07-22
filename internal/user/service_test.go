@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestUserService_Signup(t *testing.T) {
+func TestUserServiceSignup(t *testing.T) {
 	mockRepo := &MockUserRepository{}
 	service := NewUserService(mockRepo)
 
@@ -40,7 +40,7 @@ func TestUserService_Signup(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestUserService_Login(t *testing.T) {
+func TestUserServiceLogin(t *testing.T) {
 	mockRepo := &MockUserRepository{}
 	service := NewUserService(mockRepo)
 
@@ -54,7 +54,7 @@ func TestUserService_Login(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestUserService_GetUserStats(t *testing.T) {
+func TestUserServiceGetUserStats(t *testing.T) {
 	mockRepo := &MockUserRepository{}
 	service := NewUserService(mockRepo)
 
@@ -73,7 +73,7 @@ func TestUserService_GetUserStats(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestUserService_UpdatePlayerStats(t *testing.T) {
+func TestUserServiceUpdatePlayerStats(t *testing.T) {
 	mockRepo := &MockUserRepository{}
 	service := NewUserService(mockRepo)
 
@@ -86,7 +86,7 @@ func TestUserService_UpdatePlayerStats(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestUserService_Signup_Error(t *testing.T) {
+func TestUserServiceSignup_Error(t *testing.T) {
 	mockRepo := &MockUserRepository{}
 	service := NewUserService(mockRepo)
 	user := User{ID: 5, Username: "err", Password: "fail"}
