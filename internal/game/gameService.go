@@ -203,9 +203,17 @@ func (s *GameServiceImpl) SetPlayersGameState(gameState *state.GameState) error 
 // AttemptLeadership tries to be the leader of the game if an instance fails
 func (s *GameServiceImpl) AttemptLeadership(roomId string) {
 	ticker := time.NewTicker(1000 * time.Millisecond)
-	defer ticker.Stop()
 
 	for range ticker.C {
+		room, err := s.roomRepo.GetRoom(roomId)
+		if err != nil {
+			continue
+		}
+		if room.Status != "PLAYING" {
+			ticker.Stop()
+			return
+		}
+
 		if s.repo.TryToBecomeLeader(roomId) {
 			fmt.Printf("[INFO] Instance %s is now leader of the room %s\n", instanceID, roomId)
 
