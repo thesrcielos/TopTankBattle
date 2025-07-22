@@ -85,6 +85,7 @@ func inyectDependencies() {
 	roomService := game.NewRoomService(roomRepository)
 	userService := user.NewUserService(userRepository)
 	gameServiceImp = game.NewGameService(redisRepository, roomRepository, roomService, userService)
+	redisRepository.LeaderElector = gameServiceImp
 	v1.RoomService = roomService
 	v1.UserService = userService
 	websocket.RoomService = roomService
