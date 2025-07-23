@@ -4,9 +4,12 @@ import (
 	"log"
 	"sync"
 
+	"context"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
+	"github.com/thesrcielos/TopTankBattle/pkg/db"
 )
 
 type Position struct {
@@ -59,6 +62,7 @@ type PlayerConnection struct {
 var (
 	players   = make(map[string]*PlayerConnection)
 	playersMu sync.RWMutex
+	ctx       = context.Background()
 )
 
 func RegisterPlayer(id string, roomId string, conn *websocket.Conn) {
@@ -66,6 +70,7 @@ func RegisterPlayer(id string, roomId string, conn *websocket.Conn) {
 	playersMu.Lock()
 	defer playersMu.Unlock()
 	if player == nil {
+		db.Rdb.Set(ctx, "ws:"+id, "connected", 0)
 		players[id] = &PlayerConnection{
 			ID:        id,
 			Connected: true,
@@ -93,7 +98,7 @@ func UnregisterPlayerDelayed(id string, delay time.Duration, LeaveRoom func(stri
 		player.Connected = false
 		player.ConnMu.Unlock()
 		playersMu.Unlock()
-
+		deletePlayerConn(id)
 		time.Sleep(delay)
 
 		playersMu.Lock()
@@ -101,14 +106,33 @@ func UnregisterPlayerDelayed(id string, delay time.Duration, LeaveRoom func(stri
 		if player != nil && !player.Connected {
 			delete(players, id)
 			playersMu.Unlock()
-
-			LeaveRoom(id)
+			if getConn(id) {
+				LeaveRoom(id)
+			}
 			log.Printf("Player %s removed for %s seconds of inactivity", id, delay)
 		} else {
 			playersMu.Unlock()
 			log.Printf("Player %s Reconnected on time", id)
 		}
 	}()
+}
+
+func deletePlayerConn(id string) {
+	if err := db.Rdb.Del(ctx, "ws:"+id).Err(); err != nil {
+		log.Print("Error deleting conn")
+	}
+}
+
+func getConn(id string) bool {
+	_, err := db.Rdb.Get(ctx, "ws:"+id).Result()
+	if err == redis.Nil {
+		return true
+	} else if err != nil {
+		log.Print("Error retrieving ws conn")
+		return true
+	}
+
+	return false
 }
 
 func UnregisterPlayer(id string) {
@@ -122,6 +146,7 @@ func UnregisterPlayer(id string) {
 
 	delete(players, id)
 }
+
 func GetPlayer(id string) *PlayerConnection {
 	playersMu.RLock()
 	defer playersMu.RUnlock()

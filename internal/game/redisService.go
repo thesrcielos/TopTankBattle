@@ -135,7 +135,7 @@ func (r *RedisGameStateRepository) UpdateGamePlayerState(playerId string, positi
 		game.GameMu.Lock()
 		game.Players[playerId].Position = position
 		game.GameMu.Unlock()
-		return
+		break
 	}
 }
 
