@@ -65,12 +65,19 @@ var (
 	ctx       = context.Background()
 )
 
+func setConn(id string) {
+	if db.Rdb == nil {
+		return
+	}
+	db.Rdb.Set(ctx, "ws:"+id, "connected", 0)
+}
+
 func RegisterPlayer(id string, roomId string, conn *websocket.Conn) {
 	player := GetPlayer(id)
 	playersMu.Lock()
 	defer playersMu.Unlock()
 	if player == nil {
-		db.Rdb.Set(ctx, "ws:"+id, "connected", 0)
+		setConn(id)
 		players[id] = &PlayerConnection{
 			ID:        id,
 			Connected: true,
