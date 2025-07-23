@@ -33,7 +33,7 @@ Este es el backend de un juego multijugador desarrollado en Go. Utiliza WebSocke
 ```
 
 ## Architecture
-![](assets/arquitecture.jpg)
+![](assets/arquitecture.png)
 
 ## Infrastructure
 ![](assets/infra.jpg)
