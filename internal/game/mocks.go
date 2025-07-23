@@ -1775,8 +1775,8 @@ func (_c *MockGameStateRepository_TryToBecomeLeader_Call) RunAndReturn(run func(
 }
 
 // UpdateGameBullets provides a mock function for the type MockGameStateRepository
-func (_mock *MockGameStateRepository) UpdateGameBullets(bullet state.Bullet) {
-	_mock.Called(bullet)
+func (_mock *MockGameStateRepository) UpdateGameBullets(bullet state.Bullet, players []string) {
+	_mock.Called(bullet, players)
 	return
 }
 
@@ -1787,18 +1787,24 @@ type MockGameStateRepository_UpdateGameBullets_Call struct {
 
 // UpdateGameBullets is a helper method to define mock.On call
 //   - bullet state.Bullet
-func (_e *MockGameStateRepository_Expecter) UpdateGameBullets(bullet interface{}) *MockGameStateRepository_UpdateGameBullets_Call {
-	return &MockGameStateRepository_UpdateGameBullets_Call{Call: _e.mock.On("UpdateGameBullets", bullet)}
+//   - players []string
+func (_e *MockGameStateRepository_Expecter) UpdateGameBullets(bullet interface{}, players interface{}) *MockGameStateRepository_UpdateGameBullets_Call {
+	return &MockGameStateRepository_UpdateGameBullets_Call{Call: _e.mock.On("UpdateGameBullets", bullet, players)}
 }
 
-func (_c *MockGameStateRepository_UpdateGameBullets_Call) Run(run func(bullet state.Bullet)) *MockGameStateRepository_UpdateGameBullets_Call {
+func (_c *MockGameStateRepository_UpdateGameBullets_Call) Run(run func(bullet state.Bullet, players []string)) *MockGameStateRepository_UpdateGameBullets_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 state.Bullet
 		if args[0] != nil {
 			arg0 = args[0].(state.Bullet)
 		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -1809,14 +1815,14 @@ func (_c *MockGameStateRepository_UpdateGameBullets_Call) Return() *MockGameStat
 	return _c
 }
 
-func (_c *MockGameStateRepository_UpdateGameBullets_Call) RunAndReturn(run func(bullet state.Bullet)) *MockGameStateRepository_UpdateGameBullets_Call {
+func (_c *MockGameStateRepository_UpdateGameBullets_Call) RunAndReturn(run func(bullet state.Bullet, players []string)) *MockGameStateRepository_UpdateGameBullets_Call {
 	_c.Run(run)
 	return _c
 }
 
 // UpdateGamePlayerState provides a mock function for the type MockGameStateRepository
-func (_mock *MockGameStateRepository) UpdateGamePlayerState(playerId string, position state.Position) {
-	_mock.Called(playerId, position)
+func (_mock *MockGameStateRepository) UpdateGamePlayerState(playerId string, position state.Position, players []string) {
+	_mock.Called(playerId, position, players)
 	return
 }
 
@@ -1828,11 +1834,12 @@ type MockGameStateRepository_UpdateGamePlayerState_Call struct {
 // UpdateGamePlayerState is a helper method to define mock.On call
 //   - playerId string
 //   - position state.Position
-func (_e *MockGameStateRepository_Expecter) UpdateGamePlayerState(playerId interface{}, position interface{}) *MockGameStateRepository_UpdateGamePlayerState_Call {
-	return &MockGameStateRepository_UpdateGamePlayerState_Call{Call: _e.mock.On("UpdateGamePlayerState", playerId, position)}
+//   - players []string
+func (_e *MockGameStateRepository_Expecter) UpdateGamePlayerState(playerId interface{}, position interface{}, players interface{}) *MockGameStateRepository_UpdateGamePlayerState_Call {
+	return &MockGameStateRepository_UpdateGamePlayerState_Call{Call: _e.mock.On("UpdateGamePlayerState", playerId, position, players)}
 }
 
-func (_c *MockGameStateRepository_UpdateGamePlayerState_Call) Run(run func(playerId string, position state.Position)) *MockGameStateRepository_UpdateGamePlayerState_Call {
+func (_c *MockGameStateRepository_UpdateGamePlayerState_Call) Run(run func(playerId string, position state.Position, players []string)) *MockGameStateRepository_UpdateGamePlayerState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -1842,9 +1849,14 @@ func (_c *MockGameStateRepository_UpdateGamePlayerState_Call) Run(run func(playe
 		if args[1] != nil {
 			arg1 = args[1].(state.Position)
 		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1855,7 +1867,7 @@ func (_c *MockGameStateRepository_UpdateGamePlayerState_Call) Return() *MockGame
 	return _c
 }
 
-func (_c *MockGameStateRepository_UpdateGamePlayerState_Call) RunAndReturn(run func(playerId string, position state.Position)) *MockGameStateRepository_UpdateGamePlayerState_Call {
+func (_c *MockGameStateRepository_UpdateGamePlayerState_Call) RunAndReturn(run func(playerId string, position state.Position, players []string)) *MockGameStateRepository_UpdateGamePlayerState_Call {
 	_c.Run(run)
 	return _c
 }

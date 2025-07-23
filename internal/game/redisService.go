@@ -40,8 +40,8 @@ type GameStateRepository interface {
 	SaveGameState(gameState *state.GameState)
 	RestoreGameState(roomID string) *state.GameState
 	RenewLeadership(roomID string, expiration time.Duration) (bool, error)
-	UpdateGamePlayerState(playerId string, position state.Position)
-	UpdateGameBullets(bullet state.Bullet)
+	UpdateGamePlayerState(playerId string, position state.Position, players []string)
+	UpdateGameBullets(bullet state.Bullet, players []string)
 	SetLeaderElector(elector LeaderElector)
 }
 
@@ -91,14 +91,14 @@ func (r *RedisGameStateRepository) SendReceivedMessage(messageEncoded string) {
 		payloadBytes, _ := json.Marshal(message.Payload)
 		var move MovePlayerMessage
 		json.Unmarshal(payloadBytes, &move)
-		r.UpdateGamePlayerState(move.PlayerId, move.Position)
+		r.UpdateGamePlayerState(move.PlayerId, move.Position, message.Users)
 		return
 	}
 	if message.Type == "GAME_SHOOT" {
 		payloadBytes, _ := json.Marshal(message.Payload)
 		var bullet state.Bullet
 		json.Unmarshal(payloadBytes, &bullet)
-		r.UpdateGameBullets(bullet)
+		r.UpdateGameBullets(bullet, message.Users)
 		return
 	}
 	if message.Type == "GAME_START_INFO" {
@@ -124,26 +124,35 @@ func (r *RedisGameStateRepository) SendReceivedMessage(messageEncoded string) {
 	}
 }
 
-func (r *RedisGameStateRepository) UpdateGamePlayerState(playerId string, position state.Position) {
-	player := state.GetPlayer(playerId)
-	if player == nil || player.GameState == nil {
+func (r *RedisGameStateRepository) UpdateGamePlayerState(playerId string, position state.Position, players []string) {
+	players = append(players, playerId)
+	for _, id := range players {
+		player := state.GetPlayer(id)
+		if player == nil || player.GameState == nil {
+			return
+		}
+		game := player.GameState
+		game.GameMu.Lock()
+		game.Players[playerId].Position = position
+		game.GameMu.Unlock()
 		return
 	}
-	game := player.GameState
-	game.GameMu.Lock()
-	game.Players[playerId].Position = position
-	game.GameMu.Unlock()
 }
 
-func (r *RedisGameStateRepository) UpdateGameBullets(bullet state.Bullet) {
-	player := state.GetPlayer(bullet.OwnerId)
-	if player == nil || player.GameState == nil {
+func (r *RedisGameStateRepository) UpdateGameBullets(bullet state.Bullet, players []string) {
+	players = append(players, bullet.OwnerId)
+	for _, playerId := range players {
+		player := state.GetPlayer(playerId)
+		if player == nil || player.GameState == nil {
+			continue
+		}
+		game := player.GameState
+		game.GameMu.Lock()
+		game.Bullets[bullet.ID] = &bullet
+		game.GameMu.Unlock()
 		return
 	}
-	game := player.GameState
-	game.GameMu.Lock()
-	game.Bullets[bullet.ID] = &bullet
-	game.GameMu.Unlock()
+
 }
 
 type MovePlayerMessage struct {

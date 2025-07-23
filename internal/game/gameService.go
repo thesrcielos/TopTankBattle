@@ -271,7 +271,8 @@ func (s *GameServiceImpl) MovePlayer(playerId string, newPosition state.Position
 	}
 
 	if player.GameState == nil {
-		message.Users = s.getPlayerIdsFromRoom(player.RoomId, player.ID)
+		players := s.getPlayerIdsFromRoom(player.RoomId, player.ID)
+		message.Users = players
 		s.SendGameChangeMessage(player.RoomId, message)
 		gameMessage := GameMessage{
 			Type: "GAME_MOVE",
@@ -279,6 +280,7 @@ func (s *GameServiceImpl) MovePlayer(playerId string, newPosition state.Position
 				PlayerId: playerId,
 				Position: newPosition,
 			},
+			Users: players,
 		}
 		s.SendGameChangeMessage(player.RoomId, gameMessage)
 		return
@@ -337,6 +339,7 @@ func (s *GameServiceImpl) ShootBullet(bullet *state.Bullet) {
 		gameMessage := GameMessage{
 			Type:    "GAME_SHOOT",
 			Payload: bullet,
+			Users:   players,
 		}
 		s.SendGameChangeMessage(player.RoomId, gameMessage)
 		return
