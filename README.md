@@ -32,6 +32,12 @@ Este es el backend de un juego multijugador desarrollado en Go. Utiliza WebSocke
 └── README.md          # Este archivo
 ```
 
+## Architecture
+![](assets/arquitecture.jpg)
+
+## Infrastructure
+![](assets/infra.jpg)
+
 ## ⚙️ Instalación
 
 ### Prerrequisitos
@@ -94,6 +100,7 @@ wscat -c ws://localhost:8080/game
   - `LEAVE_ROOM`
   - `MOVE`
   - `SHOOT`
+  - `GAME_START`
 
 ## 🧱 Contribuir
 
